@@ -83,7 +83,7 @@ jobs:
       - name: Check through Caddy
         run: |
           curl -fsS http://localhost/healthz
-          curl -fsS http://localhost/ | grep -q "skyhop"
+          curl -fsS http://localhost/ | grep -q "Mitflugbörse"
           curl -fsSI http://localhost/ | grep -qi "x-frame-options: DENY"
       - name: Admin + cron inside the container
         run: |
