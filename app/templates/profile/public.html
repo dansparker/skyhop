@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, rating, flight_card %}
+{% block title %}{{ user.short_name }} – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="profile-head">
+    {{ avatar(user, 'xl') }}
+    <div>
+      <h1>{{ user.short_name }} {% if user.is_pilot %}<span class="verified">✔ verifizierte:r Pilot:in</span>{% endif %}</h1>
+      <div>{{ rating(user) }}</div>
+      <p class="muted">{% if user.city %}📍 {{ user.city }} · {% endif %}Mitglied seit {{ user.created_at|dt('date') }}</p>
+      {% if current_user.is_authenticated and current_user.id != user.id %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('messages.start', user_id=user.id) }}">💬 Nachricht</a>
+      {% elif current_user.is_authenticated %}
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('profile.edit') }}">Profil bearbeiten</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="detail-layout">
+    <div class="detail-main">
+      {% if user.bio %}<section class="box"><h2>Über mich</h2><p class="pre">{{ user.bio }}</p></section>{% endif %}
+
+      {% if upcoming %}
+        <h2>Nächste Flüge</h2>
+        <div class="card-grid card-grid-2">{% for f in upcoming %}{{ flight_card(f) }}{% endfor %}</div>
+      {% endif %}
+
+      <section class="box">
+        <h2>Bewertungen ({{ user.rating_count }})</h2>
+        {% for r in user.reviews_received %}
+          <div class="review">
+            <div class="review-head">{{ avatar(r.author, 'sm') }} <b>{{ r.author.short_name }}</b> <span class="stars">{{ r.rating|stars }}</span> <span class="muted small">{{ r.created_at|dt('date') }}</span></div>
+            {% if r.comment %}<p>{{ r.comment }}</p>{% endif %}
+            <div class="small muted">Flug: {{ r.booking.flight.title }}</div>
+          </div>
+        {% else %}
+          <p class="muted">Noch keine Bewertungen.</p>
+        {% endfor %}
+      </section>
+    </div>
+    {% if user.is_pilot %}
+    <aside class="detail-side">
+      <div class="box">
+        <h3>Pilotenprofil</h3>
+        <div class="calc-row"><span>Lizenz</span><b>{{ user.license_type }}</b></div>
+        <div class="calc-row"><span>Flugstunden</span><b>{{ user.flight_hours }}</b></div>
+        {% if user.home_airport %}<div class="calc-row"><span>Heimatflugplatz</span><b>{{ user.home_airport.icao }}</b></div>{% endif %}
+        <div class="calc-row"><span>Durchgeführte Flüge</span><b>{{ user.completed_flights_count }}</b></div>
+      </div>
+      {% if user.aircraft %}
+      <div class="box">
+        <h3>Flugzeuge</h3>
+        {% for a in user.aircraft %}<div class="aircraft-row"><div class="aircraft-icon sm">🛩</div><div><b>{{ a.manufacturer }} {{ a.model }}</b><div class="small muted">{{ a.registration }} · {{ a.seats }} Plätze</div></div></div>{% endfor %}
+      </div>
+      {% endif %}
+    </aside>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

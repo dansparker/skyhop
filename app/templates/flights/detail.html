@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, rating, flight_card, csrf, booking_status %}
+{% block title %}{{ flight.title }} – Skyhop{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block content %}
+{% set is_owner = current_user.is_authenticated and current_user.id == flight.pilot_id %}
+<div class="container page">
+  <a class="back" href="{{ url_for('flights.search') }}">← Zurück zur Suche</a>
+  <div class="detail-layout">
+    <div class="detail-main">
+      <div class="detail-head">
+        <span class="chip chip-{{ flight.flight_type }}">{{ flight.type_label }}</span>
+        {% if flight.status != 'published' %}<span class="chip chip-muted">{{ flight.status_label }}</span>{% endif %}
+        <h1>{{ flight.title }}</h1>
+        <p class="lead">{{ flight.route_label }} · {{ flight.departure_time|dt }}</p>
+      </div>
+
+      <div id="flight-map" class="map" data-routes='[{"title": {{ flight.title|tojson }}, "from": [{{ flight.departure.lat }}, {{ flight.departure.lon }}], "to": [{{ flight.arrival.lat }}, {{ flight.arrival.lon }}], "fromLabel": {{ flight.departure.label|tojson }}, "toLabel": {{ flight.arrival.label|tojson }}}]'></div>
+
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-time">{{ flight.departure_time|dt('time') }}</div>
+          <div class="tl-dot"></div>
+          <div><b>{{ flight.departure.city }}</b> · {{ flight.departure.icao }}<div class="muted small">{{ flight.departure.name }}</div></div>
+        </div>
+        <div class="tl-item tl-mid"><div class="tl-time"></div><div class="tl-line"></div><div class="muted small">✈ {{ flight.duration_label }} Flugzeit{% if flight.distance_km %} · ca. {{ flight.distance_km }} km{% endif %}</div></div>
+        <div class="tl-item">
+          <div class="tl-time">{{ flight.arrival_time|dt('time') }}</div>
+          <div class="tl-dot"></div>
+          <div><b>{{ flight.arrival.city }}</b> · {{ flight.arrival.icao }}<div class="muted small">{{ flight.arrival.name }}</div></div>
+        </div>
+        {% if flight.return_time %}
+        <div class="tl-item">
+          <div class="tl-time">{{ flight.return_time|dt('time') }}</div>
+          <div class="tl-dot tl-dot-return"></div>
+          <div><b>Rückflug</b> nach {{ flight.departure.city }}<div class="muted small">{{ flight.return_time|dt('date') }}</div></div>
+        </div>
+        {% endif %}
+      </div>
+
+      <section class="box">
+        <h2>Über diesen Flug</h2>
+        <p class="pre">{{ flight.description or 'Keine Beschreibung.' }}</p>
+        {% if flight.meeting_point %}<p><b>Treffpunkt:</b> {{ flight.meeting_point }}</p>{% endif %}
+      </section>
+
+      <section class="box">
+        <h2>Flugzeug</h2>
+        <div class="aircraft-row">
+          <div class="aircraft-icon">🛩</div>
+          <div>
+            <b>{{ flight.aircraft.manufacturer }} {{ flight.aircraft.model }}</b> · {{ flight.aircraft.registration }}
+            <div class="muted small">{{ flight.aircraft.seats }} Passagierplätze · {{ flight.aircraft.cruise_speed_kt }} kt Reisegeschwindigkeit{% if flight.aircraft.year %} · Baujahr {{ flight.aircraft.year }}{% endif %}</div>
+            {% if flight.aircraft.description %}<p class="small">{{ flight.aircraft.description }}</p>{% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="box">
+        <h2>Deine Pilotin / dein Pilot</h2>
+        <div class="pilot-row">
+          {{ avatar(flight.pilot, 'lg') }}
+          <div>
+            <a href="{{ url_for('profile.public', user_id=flight.pilot.id) }}"><b>{{ flight.pilot.name }}</b></a>
+            <span class="verified" title="Lizenz verifiziert">✔ verifiziert</span>
+            <div>{{ rating(flight.pilot) }}</div>
+            <div class="muted small">{{ flight.pilot.license_type }} · {{ flight.pilot.flight_hours }} Flugstunden{% if flight.pilot.home_airport %} · Heimatplatz {{ flight.pilot.home_airport.icao }}{% endif %}</div>
+          </div>
+        </div>
+        {% if flight.pilot.bio %}<p>{{ flight.pilot.bio }}</p>{% endif %}
+        {% if current_user.is_authenticated and not is_owner %}
+          <a class="btn btn-ghost" href="{{ url_for('messages.start', user_id=flight.pilot.id, flight=flight.id) }}">💬 Frage stellen</a>
+        {% endif %}
+      </section>
+
+      {% if is_owner %}
+      <section class="box">
+        <h2>Buchungen ({{ flight.bookings|length }})</h2>
+        {% if flight.bookings %}
+          <table class="table">
+            <thead><tr><th>Passagier</th><th>Plätze</th><th>Betrag</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+            {% for b in flight.bookings %}
+              <tr>
+                <td>{{ avatar(b.passenger, 'sm') }} <a href="{{ url_for('profile.public', user_id=b.passenger.id) }}">{{ b.passenger.short_name }}</a></td>
+                <td>{{ b.seats }}</td><td>{{ b.total_price|eur }}</td><td>{{ booking_status(b) }}</td>
+                <td class="actions">
+                  {% if b.status == 'pending' %}
+                    <form method="post" action="{{ url_for('bookings.accept', booking_id=b.id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-sm btn-success">Annehmen</button></form>
+                    <form method="post" action="{{ url_for('bookings.decline', booking_id=b.id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ request.path }}"><button class="btn btn-sm btn-ghost">Ablehnen</button></form>
+                  {% endif %}
+                  <a class="btn btn-sm btn-ghost" href="{{ url_for('bookings.detail', booking_id=b.id) }}">Details</a>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        {% else %}<p class="muted">Noch keine Anfragen.</p>{% endif %}
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="detail-side">
+      <div class="booking-card sticky">
+        <div class="price-big">{{ flight.price_per_seat|eur }} <span>pro Platz</span></div>
+        <div class="seat-bar"><div style="width: {{ (flight.seats_booked / flight.seats_total * 100)|round }}%"></div></div>
+        <p class="small muted">{{ flight.seats_available }} von {{ flight.seats_total }} Plätzen frei</p>
+
+        {% if is_owner %}
+          {% if flight.status == 'published' and not flight.is_past %}
+            <a class="btn btn-primary btn-block" href="{{ url_for('flights.edit', flight_id=flight.id) }}">Flug bearbeiten</a>
+            <form method="post" action="{{ url_for('flights.cancel', flight_id=flight.id) }}" data-confirm="Flug wirklich absagen? Alle Passagiere werden informiert und erstattet.">
+              {{ csrf() }}
+              <input class="input" name="reason" placeholder="Grund (optional, z. B. Wetter)">
+              <button class="btn btn-danger-ghost btn-block">Flug absagen</button>
+            </form>
+          {% elif flight.status == 'published' and flight.is_past %}
+            <form method="post" action="{{ url_for('flights.complete', flight_id=flight.id) }}">{{ csrf() }}<button class="btn btn-success btn-block">Als durchgeführt markieren</button></form>
+          {% endif %}
+        {% elif my_booking %}
+          <p>Deine Buchung: {{ booking_status(my_booking) }}</p>
+          <a class="btn btn-primary btn-block" href="{{ url_for('bookings.detail', booking_id=my_booking.id) }}">Zur Buchung</a>
+        {% elif flight.is_bookable %}
+          <form method="post" action="{{ url_for('bookings.request_booking', flight_id=flight.id) }}" data-price="{{ flight.price_per_seat }}" class="booking-form">
+            {{ csrf() }}
+            <label class="field"><span>Plätze</span>
+              <select name="seats" data-seat-select>{% for i in range(1, flight.seats_available + 1) %}<option value="{{ i }}">{{ i }} {{ 'Platz' if i == 1 else 'Plätze' }}</option>{% endfor %}</select>
+            </label>
+            <label class="field"><span>Nachricht an {{ flight.pilot.first_name }}</span>
+              <textarea name="message" rows="3" placeholder="Stell dich kurz vor (Gewicht, Gepäck, Fragen …)"></textarea>
+            </label>
+            <div class="calc-row total"><span>Gesamt</span><b data-total>{{ flight.price_per_seat|eur }}</b></div>
+            <p class="small muted">inkl. {{ (fee_rate * 100)|int }} % Servicegebühr. Du zahlst erst, wenn {{ flight.pilot.first_name }} deine Anfrage bestätigt.</p>
+            {% if current_user.is_authenticated %}
+              <button class="btn btn-accent btn-block btn-lg" type="submit">Buchung anfragen</button>
+            {% else %}
+              <a class="btn btn-accent btn-block btn-lg" href="{{ url_for('auth.login', next=request.path) }}">Anmelden &amp; anfragen</a>
+            {% endif %}
+          </form>
+        {% else %}
+          <div class="alert alert-info">Dieser Flug ist nicht mehr buchbar.</div>
+        {% endif %}
+
+        {% if current_user.is_authenticated and not is_owner %}
+          <form method="post" action="{{ url_for('main.toggle_favorite', flight_id=flight.id) }}" class="fav-form">
+            {{ csrf() }}<input type="hidden" name="next" value="{{ request.path }}">
+            <button class="btn btn-ghost btn-block">{{ '♥ Gemerkt' if is_favorite else '♡ Merken' }}</button>
+          </form>
+        {% endif %}
+        <button class="btn btn-ghost btn-block" data-share="{{ request.url }}">↗ Teilen</button>
+        <ul class="trust">
+          <li>✔ Lizenz & Medical geprüft</li>
+          <li>✔ Kostenteilung nach EU-Verordnung 965/2012</li>
+          <li>✔ Volle Erstattung bei Absage durch die Pilot:in</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  {% if similar %}
+  <section class="section-tight">
+    <h2>Weitere Flüge ab {{ flight.departure.city }}</h2>
+    <div class="card-grid">{% for f in similar %}{{ flight_card(f) }}{% endfor %}</div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>{% endblock %}

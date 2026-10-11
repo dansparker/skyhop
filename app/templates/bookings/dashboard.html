@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, booking_status, csrf %}
+{% block title %}Dashboard – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="dash-head">
+    {{ avatar(current_user, 'lg') }}
+    <div>
+      <h1>Hallo {{ current_user.first_name }}!</h1>
+      <p class="muted">
+        {% if current_user.is_pilot %}Verifizierte:r Pilot:in · {{ current_user.license_type }}
+        {% elif current_user.pilot_status == 'pending' %}Pilotenverifizierung läuft …
+        {% else %}Passagier · <a href="{{ url_for('pilot.become') }}">Pilot:in werden?</a>{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <a class="{% if tab != 'pilot' %}active{% endif %}" href="{{ url_for('bookings.dashboard') }}">Meine Buchungen</a>
+    {% if current_user.is_pilot or upcoming_flights or past_flights %}
+      <a class="{% if tab == 'pilot' %}active{% endif %}" href="{{ url_for('bookings.dashboard', tab='pilot') }}">Meine Flüge {% if open_requests %}<span class="badge">{{ open_requests }}</span>{% endif %}</a>
+    {% endif %}
+  </div>
+
+  {% if tab != 'pilot' %}
+    <h2>Anstehend</h2>
+    {% if upcoming_bookings %}
+      <div class="list">
+        {% for b in upcoming_bookings %}
+          <a class="list-item" href="{{ url_for('bookings.detail', booking_id=b.id) }}">
+            <div class="list-date"><b>{{ b.flight.departure_time.day }}</b><span>{{ b.flight.departure_time|dt('short') }}</span></div>
+            <div class="grow">
+              <b>{{ b.flight.title }}</b>
+              <div class="muted small">{{ b.flight.route_label }} · {{ b.flight.departure_time|dt('time') }} Uhr · mit {{ b.flight.pilot.first_name }}</div>
+            </div>
+            <div class="right">{{ booking_status(b) }}<div class="small">{{ b.seats }} × · {{ b.total_price|eur }}</div></div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">Noch keine anstehenden Flüge. <a href="{{ url_for('flights.search') }}">Jetzt Flug finden →</a></div>
+    {% endif %}
+
+    {% if past_bookings %}
+      <h2>Vergangen &amp; storniert</h2>
+      <div class="list">
+        {% for b in past_bookings %}
+          <a class="list-item faded" href="{{ url_for('bookings.detail', booking_id=b.id) }}">
+            <div class="list-date"><b>{{ b.flight.departure_time.day }}</b><span>{{ b.flight.departure_time|dt('short') }}</span></div>
+            <div class="grow"><b>{{ b.flight.title }}</b><div class="muted small">{{ b.flight.route_label }}</div></div>
+            <div class="right">{{ booking_status(b) }}
+              {% if b.is_reviewable and not b.review_by(current_user) %}<div class="small accent">Jetzt bewerten</div>{% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="kpis">
+      <div class="kpi"><b>{{ upcoming_flights|length }}</b><span>geplante Flüge</span></div>
+      <div class="kpi"><b>{{ open_requests }}</b><span>offene Anfragen</span></div>
+      <div class="kpi"><b>{{ earnings|eur }}</b><span>Kostenbeteiligung erhalten</span></div>
+      <div class="kpi"><b>{{ current_user.rating or '–' }}</b><span>Ø Bewertung</span></div>
+    </div>
+    <div class="section-head">
+      <h2>Geplante Flüge</h2>
+      <a class="btn btn-primary btn-sm" href="{{ url_for('flights.create') }}">+ Flug anbieten</a>
+    </div>
+    {% if upcoming_flights %}
+      {% for f in upcoming_flights %}
+        <div class="box flight-admin">
+          <div class="flight-admin-head">
+            <div>
+              <a href="{{ url_for('flights.detail', flight_id=f.id) }}"><b>{{ f.title }}</b></a>
+              <div class="muted small">{{ f.departure_time|dt }} · {{ f.route_label }} · {{ f.seats_booked }}/{{ f.seats_total }} gebucht · {{ f.price_per_seat|eur }}/Platz</div>
+            </div>
+            <a class="btn btn-ghost btn-sm" href="{{ url_for('flights.edit', flight_id=f.id) }}">Bearbeiten</a>
+          </div>
+          {% for b in f.bookings if b.status in ('pending', 'accepted', 'paid') %}
+            <div class="request-row">
+              {{ avatar(b.passenger, 'sm') }}
+              <div class="grow">
+                <a href="{{ url_for('profile.public', user_id=b.passenger.id) }}"><b>{{ b.passenger.short_name }}</b></a> · {{ b.seats }} Platz/Plätze · {{ b.total_price|eur }}
+                {% if b.message %}<div class="small muted">„{{ b.message|truncate(120) }}“</div>{% endif %}
+              </div>
+              {{ booking_status(b) }}
+              {% if b.status == 'pending' %}
+                <form method="post" action="{{ url_for('bookings.accept', booking_id=b.id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ url_for('bookings.dashboard', tab='pilot') }}"><button class="btn btn-sm btn-success">Annehmen</button></form>
+                <form method="post" action="{{ url_for('bookings.decline', booking_id=b.id) }}">{{ csrf() }}<input type="hidden" name="next" value="{{ url_for('bookings.dashboard', tab='pilot') }}"><button class="btn btn-sm btn-ghost">Ablehnen</button></form>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">Du hast aktuell keine Flüge geplant.</div>
+    {% endif %}
+
+    {% if past_flights %}
+      <h2>Vergangene &amp; abgesagte Flüge</h2>
+      <div class="list">
+        {% for f in past_flights %}
+          <a class="list-item faded" href="{{ url_for('flights.detail', flight_id=f.id) }}">
+            <div class="list-date"><b>{{ f.departure_time.day }}</b><span>{{ f.departure_time|dt('short') }}</span></div>
+            <div class="grow"><b>{{ f.title }}</b><div class="muted small">{{ f.route_label }} · {{ f.seats_booked }} Passagiere</div></div>
+            <div class="right"><span class="status status-{{ f.status }}">{{ f.status_label if f.status != 'published' else 'Abschluss offen' }}</span></div>
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, avatar %}
+{% block title %}Bezahlen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Buchung abschließen</h1>
+  <div class="grid-2">
+    <section class="box">
+      <h2>{{ flight.title }}</h2>
+      <p>{{ flight.route_label }}<br>{{ flight.departure_time|dt }}</p>
+      <div class="pilot-row">{{ avatar(flight.pilot) }} <span>mit {{ flight.pilot.name }}</span></div>
+      <hr>
+      <div class="calc-row"><span>{{ booking.seats }} × {{ flight.price_per_seat|eur }}</span><b>{{ booking.total_price|eur }}</b></div>
+      <div class="calc-row small muted"><span>inkl. Servicegebühr</span><span>{{ booking.service_fee|eur }}</span></div>
+      <div class="calc-row total"><span>Zu zahlen</span><b>{{ booking.total_price|eur }}</b></div>
+    </section>
+    <form method="post" class="box">
+      {{ csrf() }}
+      <h2>Zahlung</h2>
+      <div class="alert alert-info">Demo-Modus: Skyhop ist ein Open-Source-Nachbau. Es werden keine Zahlungsdaten abgefragt und kein Geld bewegt.</div>
+      <p class="small">Der Betrag wird treuhänderisch gehalten und erst nach dem Flug an die Pilot:in ausgezahlt. Sagt die Pilot:in ab (z. B. wegen Wetter), erhältst du den vollen Betrag zurück.</p>
+      <label class="check"><input type="checkbox" name="confirm" required> Ich akzeptiere die Buchungs- und Stornobedingungen und bestätige, dass es sich um einen nicht-kommerziellen Flug auf Kostenteilungsbasis handelt.</label>
+      <button class="btn btn-accent btn-block btn-lg" type="submit">{{ booking.total_price|eur }} zahlungspflichtig buchen</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

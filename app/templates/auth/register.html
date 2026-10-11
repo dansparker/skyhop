@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Registrieren – Skyhop{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <form method="post" class="auth-card">
+    {{ csrf() }}
+    <h1>Konto erstellen</h1>
+    <p class="muted">Kostenlos und in einer Minute erledigt.</p>
+    <div class="field-row">
+      <label class="field"><span>Vorname</span><input name="first_name" required value="{{ form.get('first_name', '') }}" autocomplete="given-name"></label>
+      <label class="field"><span>Nachname</span><input name="last_name" required value="{{ form.get('last_name', '') }}" autocomplete="family-name"></label>
+    </div>
+    <label class="field"><span>E-Mail</span><input type="email" name="email" required value="{{ form.get('email', '') }}" autocomplete="email"></label>
+    <label class="field"><span>Wohnort (optional)</span><input name="city" value="{{ form.get('city', '') }}"></label>
+    <div class="field-row">
+      <label class="field"><span>Passwort</span><input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+      <label class="field"><span>Wiederholen</span><input type="password" name="password2" minlength="8" required autocomplete="new-password"></label>
+    </div>
+    <label class="check"><input type="checkbox" name="as_pilot" {% if form.get('as_pilot') %}checked{% endif %}> Ich bin Pilot:in und möchte Flüge anbieten</label>
+    <label class="check"><input type="checkbox" name="terms" required> Ich akzeptiere die Nutzungsbedingungen und Datenschutzhinweise</label>
+    <button class="btn btn-primary btn-block btn-lg" type="submit">Registrieren</button>
+    <p class="center small">Schon dabei? <a href="{{ url_for('auth.login') }}">Anmelden</a></p>
+  </form>
+</div>
+{% endblock %}

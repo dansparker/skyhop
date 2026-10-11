@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}So funktioniert's – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose">
+  <h1>So funktioniert Skyhop</h1>
+  <p class="lead">Skyhop ist eine Mitflugbörse: Privatpilot:innen bieten freie Plätze in ihren Kleinflugzeugen an, Passagiere fliegen mit und teilen die Kosten.</p>
+
+  <h2>Für Passagiere</h2>
+  <ol>
+    <li><b>Flug suchen:</b> nach Abflugort (mit Umkreis), Ziel, Datum, Flugart und Budget.</li>
+    <li><b>Anfrage senden:</b> wähle die Anzahl der Plätze und stell dich kurz vor. Fragen kannst du vorab im Chat klären.</li>
+    <li><b>Bestätigung abwarten:</b> die Pilot:in nimmt deine Anfrage an oder lehnt sie ab.</li>
+    <li><b>Bezahlen:</b> nach der Bestätigung zahlst du über Skyhop. Das Geld wird bis nach dem Flug treuhänderisch gehalten.</li>
+    <li><b>Fliegen &amp; bewerten:</b> nach dem Flug bewertet ihr euch gegenseitig.</li>
+  </ol>
+  <p>Nichts Passendes dabei? <a href="{{ url_for('wishes.create') }}">Gib einen Flugwunsch auf</a> – du wirst benachrichtigt, sobald ein passender Flug online geht.</p>
+
+  <h2>Für Pilot:innen</h2>
+  <ol>
+    <li><b>Registrieren &amp; verifizieren:</b> Lizenz (LAPL/PPL/CPL/ATPL), Medical und Flugerfahrung angeben.</li>
+    <li><b>Flugzeug anlegen:</b> Kennzeichen, Modell und Passagierplätze.</li>
+    <li><b>Flug anbieten:</b> Streckenflug, Rundflug oder Tagesausflug. Du gibst die direkten Kosten an, Skyhop berechnet den fairen Preis pro Platz.</li>
+    <li><b>Anfragen managen:</b> du entscheidest, wer mitfliegt.</li>
+    <li><b>Durchführen:</b> nach dem Flug markierst du ihn als durchgeführt, die Kostenbeteiligung wird ausgezahlt.</li>
+  </ol>
+
+  <h2>Die Kostenteilung</h2>
+  <p>Nach der EU-Verordnung 965/2012 (Air Ops, NCO) dürfen bis zu sechs Personen die <b>direkten Kosten</b> eines Flugs (Charter/Miete, Treibstoff, Lande- und Anfluggebühren) teilen – vorausgesetzt, die Pilot:in trägt selbst einen Anteil. Skyhop rechnet deshalb:</p>
+  <div class="calc-card"><b>Preis pro Platz = direkte Kosten ÷ (Passagierplätze + 1)</b></div>
+  <p>Beispiel: 600 € direkte Kosten, 3 Plätze → 150 € pro Passagier, die Pilot:in trägt mindestens 150 €.</p>
+  <p>Skyhop behält eine Servicegebühr von 10 % für Zahlungsabwicklung, Support und Plattformbetrieb ein.</p>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, avatar, airport_datalist %}
+{% block title %}Einstellungen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Einstellungen</h1>
+  <form method="post" class="form-card">
+    {{ csrf() }}
+    <div class="pilot-row">{{ avatar(current_user, 'lg') }}<div><b>{{ current_user.email }}</b><div class="small muted">Dein Avatar wird aus deinen Initialen erstellt.</div></div></div>
+    <div class="field-row">
+      <label class="field"><span>Vorname</span><input name="first_name" required value="{{ form.get('first_name', '') }}"></label>
+      <label class="field"><span>Nachname</span><input name="last_name" required value="{{ form.get('last_name', '') }}"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>Wohnort</span><input name="city" value="{{ form.get('city', '') }}"></label>
+      <label class="field"><span>Telefon (nur für bestätigte Mitflieger:innen sichtbar)</span><input name="phone" value="{{ form.get('phone', '') }}"></label>
+    </div>
+    {% if current_user.pilot_status != 'none' %}
+      <label class="field"><span>Heimatflugplatz</span><input name="home_airport" list="airports" value="{{ form.get('home_airport', '') }}"></label>
+      {{ airport_datalist() }}
+    {% endif %}
+    <label class="field"><span>Über mich</span><textarea name="bio" rows="5" placeholder="Erzähl etwas über dich – Pilot:innen und Passagiere freuen sich!">{{ form.get('bio', '') }}</textarea></label>
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{{ url_for('auth.change_password') }}">Passwort ändern</a>
+      <button class="btn btn-primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

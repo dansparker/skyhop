@@ -1,0 +1,6 @@
+<div class="tabs">
+  <a class="{% if request.endpoint == 'admin.index' %}active{% endif %}" href="{{ url_for('admin.index') }}">Übersicht</a>
+  <a class="{% if request.endpoint == 'admin.pilots' %}active{% endif %}" href="{{ url_for('admin.pilots') }}">Piloten-Verifizierung</a>
+  <a class="{% if request.endpoint == 'admin.users' %}active{% endif %}" href="{{ url_for('admin.users') }}">Nutzer:innen</a>
+  <a class="{% if request.endpoint == 'admin.flights' %}active{% endif %}" href="{{ url_for('admin.flights') }}">Flüge</a>
+</div>

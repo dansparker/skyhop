@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, airport_datalist %}
+{% block title %}{{ 'Flug bearbeiten' if flight else 'Flug anbieten' }} – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>{{ 'Flug bearbeiten' if flight else 'Neuen Flug anbieten' }}</h1>
+  <p class="lead">Beschreibe deinen Flug. Der Preis pro Platz wird automatisch nach den EU-Kostenteilungsregeln berechnet.</p>
+  <form method="post" class="form-card" data-flight-form>
+    {{ csrf() }}
+    <h2>Art des Flugs</h2>
+    <div class="radio-cards">
+      {% for k, v in types.items() %}
+        <label class="radio-card">
+          <input type="radio" name="flight_type" value="{{ k }}" {% if form.get('flight_type', 'trip') == k %}checked{% endif %}>
+          <span><b>{{ v }}</b>
+            <small>{% if k == 'trip' %}Von A nach B{% elif k == 'roundtrip' %}Start und Landung am selben Platz{% else %}Hin, Aufenthalt, zurück{% endif %}</small>
+          </span>
+        </label>
+      {% endfor %}
+    </div>
+
+    <label class="field"><span>Titel</span><input name="title" required maxlength="160" value="{{ form.get('title', '') }}" placeholder="z. B. Wachau-Rundflug bei Sonnenuntergang"></label>
+
+    <h2>Route</h2>
+    <div class="field-row">
+      <label class="field"><span>Abflugplatz</span><input name="departure" list="airports" required value="{{ form.get('departure', '') }}" placeholder="ICAO oder Stadt"></label>
+      <label class="field" data-arrival-field><span>Zielflugplatz</span><input name="arrival" list="airports" value="{{ form.get('arrival', '') }}" placeholder="ICAO oder Stadt"></label>
+    </div>
+    {{ airport_datalist() }}
+    <label class="field"><span>Treffpunkt</span><input name="meeting_point" value="{{ form.get('meeting_point', '') }}" placeholder="z. B. Vor dem Clubhaus, 30 Minuten vor Abflug"></label>
+
+    <h2>Zeit</h2>
+    <div class="field-row">
+      <label class="field"><span>Datum</span><input type="date" name="date" required value="{{ form.get('date', '') }}"></label>
+      <label class="field"><span>Abflugzeit</span><input type="time" name="time" required value="{{ form.get('time', '') }}"></label>
+      <label class="field"><span>Flugdauer (Minuten)</span><input type="number" name="duration_minutes" min="10" max="1440" required value="{{ form.get('duration_minutes', 60) }}"></label>
+    </div>
+    <div class="field-row" data-return-fields>
+      <label class="field"><span>Rückflug-Datum</span><input type="date" name="return_date" value="{{ form.get('return_date', '') }}"></label>
+      <label class="field"><span>Rückflug-Zeit</span><input type="time" name="return_time" value="{{ form.get('return_time', '') }}"></label>
+    </div>
+
+    <h2>Flugzeug &amp; Plätze</h2>
+    <div class="field-row">
+      <label class="field"><span>Flugzeug</span>
+        <select name="aircraft_id" required data-aircraft>
+          {% for a in current_user.aircraft %}
+            <option value="{{ a.id }}" data-seats="{{ a.seats }}" {% if form.get('aircraft_id')|string == a.id|string %}selected{% endif %}>{{ a.label }} – {{ a.seats }} Plätze</option>
+          {% endfor %}
+        </select>
+        <small><a href="{{ url_for('pilot.aircraft_new', next=request.path) }}">+ weiteres Flugzeug anlegen</a></small>
+      </label>
+      <label class="field"><span>Freie Passagierplätze</span><input type="number" name="seats_total" min="1" max="20" required value="{{ form.get('seats_total', 3) }}" data-seats></label>
+    </div>
+
+    <h2>Kosten</h2>
+    <div class="cost-box">
+      <label class="field"><span>Direkte Kosten gesamt (€)</span><input type="number" name="direct_cost" min="1" required value="{{ form.get('direct_cost', '') }}" data-cost placeholder="Charter/Miete, Treibstoff, Lande- &amp; Anfluggebühren"></label>
+      <div class="cost-result">
+        <div class="calc-row"><span>Preis pro Passagierplatz</span><b data-price-out>–</b></div>
+        <div class="calc-row"><span>Dein Eigenanteil (mind.)</span><b data-pilot-share>–</b></div>
+        <p class="small muted">Nach EU-VO 965/2012 dürfen sich bis zu 6 Personen inkl. Pilot:in die direkten Kosten teilen. Du trägst immer mindestens einen gleich großen Anteil.</p>
+      </div>
+    </div>
+
+    <h2>Beschreibung</h2>
+    <label class="field"><span>Was erwartet die Passagiere?</span><textarea name="description" rows="5" placeholder="Route, Sehenswürdigkeiten, Gepäck, Gewichtslimits …">{{ form.get('description', '') }}</textarea></label>
+
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{{ url_for('flights.detail', flight_id=flight.id) if flight else url_for('bookings.dashboard', tab='pilot') }}">Abbrechen</a>
+      <button class="btn btn-primary btn-lg" type="submit">{{ 'Änderungen speichern' if flight else 'Flug veröffentlichen' }}</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

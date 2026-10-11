@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, airport_datalist %}
+{% block title %}Pilot:in werden – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Als Pilot:in auf Skyhop fliegen</h1>
+  {% set st = current_user.pilot_status %}
+  {% if st == 'verified' %}
+    <div class="alert alert-success">Du bist verifiziert! <a href="{{ url_for('flights.create') }}">Jetzt Flug anbieten →</a></div>
+  {% elif st == 'pending' %}
+    <div class="alert alert-info">Deine Angaben werden gerade geprüft. Wir benachrichtigen dich, sobald du freigeschaltet bist.</div>
+  {% elif st == 'rejected' %}
+    <div class="alert alert-warning">Deine letzte Verifizierung wurde abgelehnt. Bitte prüfe deine Angaben und reiche sie erneut ein.</div>
+  {% endif %}
+
+  <div class="steps steps-compact">
+    <div class="step"><div class="step-icon">🪪</div><h3>Lizenz angeben</h3><p>LAPL, PPL, CPL oder ATPL mit gültigem Medical.</p></div>
+    <div class="step"><div class="step-icon">✅</div><h3>Verifizierung</h3><p>Unser Team prüft deine Angaben.</p></div>
+    <div class="step"><div class="step-icon">🛩</div><h3>Flugzeug anlegen</h3><p>Kennzeichen, Modell und Sitzplätze.</p></div>
+    <div class="step"><div class="step-icon">📣</div><h3>Flüge anbieten</h3><p>Kosten teilen, öfter fliegen.</p></div>
+  </div>
+
+  {% if st != 'verified' %}
+  <form method="post" class="form-card">
+    {{ csrf() }}
+    <h2>Deine Lizenz</h2>
+    <label class="field"><span>Lizenzart</span>
+      <select name="license_type" required>
+        <option value="">Bitte wählen</option>
+        {% for k, v in licenses.items() %}<option value="{{ k }}" {% if form.get('license_type') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+      </select>
+    </label>
+    <div class="field-row">
+      <label class="field"><span>Lizenznummer</span><input name="license_number" required value="{{ form.get('license_number', '') }}" placeholder="z. B. AT.FCL.12345"></label>
+      <label class="field"><span>Flugstunden (PIC)</span><input type="number" min="0" name="flight_hours" required value="{{ form.get('flight_hours', '') }}"></label>
+    </div>
+    <label class="field"><span>Heimatflugplatz</span><input name="home_airport" list="airports" value="{{ form.get('home_airport', '') }}" placeholder="ICAO oder Stadt"></label>
+    {{ airport_datalist() }}
+    <label class="check"><input type="checkbox" name="medical" required> Ich besitze ein gültiges Medical (Klasse 1, 2 oder LAPL) und erfülle die Erfahrungsanforderungen zur Passagierbeförderung (3 Starts/Landungen in 90 Tagen).</label>
+    <button class="btn btn-primary btn-lg" type="submit">{{ 'Erneut einreichen' if st in ('pending', 'rejected') else 'Zur Verifizierung einreichen' }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

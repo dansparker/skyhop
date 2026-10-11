@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Anmelden – Skyhop{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <form method="post" class="auth-card">
+    {{ csrf() }}
+    <h1>Willkommen zurück</h1>
+    <p class="muted">Melde dich an, um Flüge zu buchen oder anzubieten.</p>
+    <label class="field"><span>E-Mail</span><input type="email" name="email" required autofocus autocomplete="email"></label>
+    <label class="field"><span>Passwort</span><input type="password" name="password" required autocomplete="current-password"></label>
+    <label class="check"><input type="checkbox" name="remember"> Angemeldet bleiben</label>
+    <button class="btn btn-primary btn-block btn-lg" type="submit">Anmelden</button>
+    <p class="center small">Noch kein Konto? <a href="{{ url_for('auth.register', next=request.args.get('next')) }}">Jetzt registrieren</a></p>
+  </form>
+</div>
+{% endblock %}

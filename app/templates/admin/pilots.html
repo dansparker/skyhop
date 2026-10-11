@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, csrf %}
+{% block title %}Piloten-Verifizierung – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <h2>Offene Verifizierungen ({{ pending|length }})</h2>
+  {% for u in pending %}
+    <div class="box request-row">
+      {{ avatar(u) }}
+      <div class="grow">
+        <b>{{ u.name }}</b> · {{ u.email }}
+        <div class="small muted">{{ u.license_type }} · Nr. {{ u.license_number }} · {{ u.flight_hours }} h{% if u.home_airport %} · {{ u.home_airport.icao }}{% endif %}</div>
+      </div>
+      <form method="post" action="{{ url_for('admin.pilot_action', user_id=u.id, action='approve') }}">{{ csrf() }}<button class="btn btn-success btn-sm">Freischalten</button></form>
+      <form method="post" action="{{ url_for('admin.pilot_action', user_id=u.id, action='reject') }}">{{ csrf() }}<button class="btn btn-danger-ghost btn-sm">Ablehnen</button></form>
+    </div>
+  {% else %}
+    <p class="muted">Keine offenen Anfragen. 🎉</p>
+  {% endfor %}
+
+  <h2>Verifizierte Pilot:innen ({{ verified|length }})</h2>
+  <table class="table">
+    <thead><tr><th>Name</th><th>Lizenz</th><th>Stunden</th><th>Heimatplatz</th><th>Bewertung</th></tr></thead>
+    <tbody>
+      {% for u in verified %}
+        <tr><td><a href="{{ url_for('profile.public', user_id=u.id) }}">{{ u.name }}</a></td><td>{{ u.license_type }}</td><td>{{ u.flight_hours }}</td><td>{{ u.home_airport.icao if u.home_airport else '–' }}</td><td>{{ u.rating or '–' }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

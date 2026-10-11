@@ -1,0 +1,51 @@
+from datetime import datetime
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from ..extensions import db
+from ..models import Flight, User
+from ..utils import find_airport
+
+bp = Blueprint("profile", __name__)
+
+
+@bp.route("/profil/<int:user_id>")
+def public(user_id):
+    user = db.session.get(User, user_id) or abort(404)
+    upcoming = (
+        Flight.query.filter(Flight.pilot_id == user.id, Flight.status == "published",
+                            Flight.departure_time > datetime.now())
+        .order_by(Flight.departure_time)
+        .all()
+    )
+    return render_template("profile/public.html", user=user, upcoming=upcoming)
+
+
+@bp.route("/profil", methods=["GET", "POST"])
+@login_required
+def edit():
+    if request.method == "POST":
+        f = request.form
+        first = f.get("first_name", "").strip()
+        last = f.get("last_name", "").strip()
+        if not first or not last:
+            flash("Vor- und Nachname dürfen nicht leer sein.", "danger")
+            return render_template("profile/edit.html", form=f)
+        current_user.first_name = first
+        current_user.last_name = last
+        current_user.city = f.get("city", "").strip() or None
+        current_user.phone = f.get("phone", "").strip() or None
+        current_user.bio = f.get("bio", "").strip() or None
+        if current_user.pilot_status != "none":
+            home = find_airport(f.get("home_airport"))
+            current_user.home_airport_id = home.id if home else None
+        db.session.commit()
+        flash("Profil gespeichert.", "success")
+        return redirect(url_for("profile.edit"))
+    form = {
+        "first_name": current_user.first_name, "last_name": current_user.last_name,
+        "city": current_user.city or "", "phone": current_user.phone or "", "bio": current_user.bio or "",
+        "home_airport": current_user.home_airport.label if current_user.home_airport else "",
+    }
+    return render_template("profile/edit.html", form=form)

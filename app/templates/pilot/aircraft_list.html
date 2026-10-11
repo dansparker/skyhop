@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Meine Flugzeuge – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <div class="section-head">
+    <h1>Meine Flugzeuge</h1>
+    <a class="btn btn-primary" href="{{ url_for('pilot.aircraft_new') }}">+ Flugzeug hinzufügen</a>
+  </div>
+  {% for a in aircraft %}
+    <div class="box aircraft-row">
+      <div class="aircraft-icon">🛩</div>
+      <div class="grow">
+        <b>{{ a.manufacturer }} {{ a.model }}</b> · {{ a.registration }}
+        <div class="small muted">{{ a.seats }} Passagierplätze · {{ a.cruise_speed_kt }} kt{% if a.year %} · Baujahr {{ a.year }}{% endif %}</div>
+        {% if a.description %}<p class="small">{{ a.description }}</p>{% endif %}
+      </div>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('pilot.aircraft_edit', aircraft_id=a.id) }}">Bearbeiten</a>
+      <form method="post" action="{{ url_for('pilot.aircraft_delete', aircraft_id=a.id) }}" data-confirm="Flugzeug löschen?">{{ csrf() }}<button class="btn btn-danger-ghost btn-sm">Löschen</button></form>
+    </div>
+  {% else %}
+    <div class="empty">Noch kein Flugzeug angelegt.</div>
+  {% endfor %}
+</div>
+{% endblock %}

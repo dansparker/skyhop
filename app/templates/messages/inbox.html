@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, csrf %}
+{% block title %}Nachrichten – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Nachrichten</h1>
+  <div class="chat-layout {% if active %}has-active{% endif %}">
+    <aside class="chat-list">
+      {% for c in conversations %}
+        {% set o = c.other(current_user) %}
+        {% set unread = c.unread_for(current_user) %}
+        <a class="chat-item {% if active and active.id == c.id %}active{% endif %} {% if unread %}unread{% endif %}" href="{{ url_for('messages.thread', conv_id=c.id) }}">
+          {{ avatar(o) }}
+          <div class="grow">
+            <div class="chat-item-head"><b>{{ o.short_name }}</b>{% if c.last_message %}<span class="small muted">{{ c.last_message.created_at|dt('rel') }}</span>{% endif %}</div>
+            {% if c.flight %}<div class="small accent">{{ c.flight.title|truncate(40) }}</div>{% endif %}
+            <div class="small muted">{{ (c.last_message.body if c.last_message else 'Neue Unterhaltung')|truncate(50) }}</div>
+          </div>
+          {% if unread %}<span class="badge">{{ unread }}</span>{% endif %}
+        </a>
+      {% else %}
+        <div class="empty small">Noch keine Nachrichten. Stelle Pilot:innen über die Flugseite deine Fragen.</div>
+      {% endfor %}
+    </aside>
+    <section class="chat-thread">
+      {% if active %}
+        {% set o = active.other(current_user) %}
+        <header class="chat-head">
+          <a class="back-sm" href="{{ url_for('messages.inbox') }}">←</a>
+          {{ avatar(o) }}
+          <div>
+            <a href="{{ url_for('profile.public', user_id=o.id) }}"><b>{{ o.name }}</b></a>
+            {% if active.flight %}<div class="small"><a href="{{ url_for('flights.detail', flight_id=active.flight.id) }}">✈ {{ active.flight.title }} · {{ active.flight.departure_time|dt('short') }}</a></div>{% endif %}
+          </div>
+        </header>
+        <div class="chat-messages" id="chat-messages">
+          {% for m in active.messages %}
+            <div class="msg {% if m.sender_id == current_user.id %}mine{% endif %}">
+              <div class="bubble">{{ m.body }}</div>
+              <div class="msg-meta">{{ m.created_at|dt('rel') }}{% if m.sender_id == current_user.id and m.read_at %} · gelesen{% endif %}</div>
+            </div>
+          {% else %}
+            <p class="muted center">Schreib die erste Nachricht an {{ o.first_name }}.</p>
+          {% endfor %}
+          <span id="bottom"></span>
+        </div>
+        <form method="post" class="chat-input">
+          {{ csrf() }}
+          <textarea name="body" rows="2" placeholder="Nachricht schreiben …" required data-submit-on-enter></textarea>
+          <button class="btn btn-primary" type="submit">Senden</button>
+        </form>
+      {% else %}
+        <div class="chat-empty muted">Wähle eine Unterhaltung aus.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

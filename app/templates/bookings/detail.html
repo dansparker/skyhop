@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, booking_status, csrf, rating %}
+{% block title %}Buchung #{{ booking.id }} – Skyhop{% endblock %}
+{% block content %}
+{% set other = booking.passenger if is_pilot else flight.pilot %}
+<div class="container page narrow">
+  <a class="back" href="{{ url_for('bookings.dashboard', tab='pilot' if is_pilot else None) }}">← Dashboard</a>
+  <div class="booking-header">
+    <div>
+      <p class="muted small">Buchung #{{ booking.id }} · angefragt {{ booking.created_at|dt('rel') }}</p>
+      <h1>{{ flight.title }}</h1>
+      <p class="lead">{{ flight.route_label }} · {{ flight.departure_time|dt }}</p>
+    </div>
+    {{ booking_status(booking) }}
+  </div>
+
+  <ol class="progress">
+    {% set steps = [('pending', 'Angefragt'), ('accepted', 'Bestätigt'), ('paid', 'Bezahlt'), ('completed', 'Geflogen')] %}
+    {% set order = {'pending': 0, 'accepted': 1, 'paid': 2, 'completed': 3} %}
+    {% for key, label in steps %}
+      <li class="{% if booking.status in order and order[booking.status] >= loop.index0 %}done{% endif %}">{{ label }}</li>
+    {% endfor %}
+  </ol>
+
+  {% if booking.status == 'declined' %}<div class="alert alert-warning">Diese Anfrage wurde abgelehnt. <a href="{{ url_for('flights.search', **{'from': flight.departure.city}) }}">Andere Flüge ab {{ flight.departure.city }} ansehen →</a></div>{% endif %}
+  {% if booking.status == 'cancelled' %}<div class="alert alert-info">Diese Buchung wurde storniert.{% if booking.paid_at %} Der bezahlte Betrag wird erstattet.{% endif %}</div>{% endif %}
+
+  <div class="grid-2">
+    <section class="box">
+      <h2>{{ 'Passagier' if is_pilot else 'Pilot:in' }}</h2>
+      <div class="pilot-row">
+        {{ avatar(other, 'lg') }}
+        <div>
+          <a href="{{ url_for('profile.public', user_id=other.id) }}"><b>{{ other.name }}</b></a>
+          <div>{{ rating(other) }}</div>
+          {% if booking.status in ('paid', 'completed') and other.phone %}<div class="small">📞 {{ other.phone }}</div>{% endif %}
+        </div>
+      </div>
+      <a class="btn btn-ghost btn-block" href="{{ url_for('messages.start', user_id=other.id, flight=flight.id) }}">💬 Nachricht schreiben</a>
+    </section>
+
+    <section class="box">
+      <h2>Kosten</h2>
+      <div class="calc-row"><span>{{ booking.seats }} × {{ flight.price_per_seat|eur }}</span><b>{{ booking.total_price|eur }}</b></div>
+      <div class="calc-row small muted"><span>davon Skyhop-Servicegebühr</span><span>{{ booking.service_fee|eur }}</span></div>
+      {% if is_pilot %}<div class="calc-row total"><span>Kostenbeteiligung für dich</span><b>{{ booking.pilot_payout|eur }}</b></div>
+      {% else %}<div class="calc-row total"><span>Gesamt</span><b>{{ booking.total_price|eur }}</b></div>{% endif %}
+      {% if booking.paid_at %}<p class="small muted">Bezahlt am {{ booking.paid_at|dt('date') }}</p>{% endif %}
+    </section>
+  </div>
+
+  {% if booking.message %}
+    <section class="box"><h2>Nachricht zur Anfrage</h2><p class="pre">{{ booking.message }}</p></section>
+  {% endif %}
+
+  <section class="box">
+    <h2>Flugdetails</h2>
+    <div class="calc-row"><span>Abflug</span><b>{{ flight.departure_time|dt }} · {{ flight.departure.label }}</b></div>
+    <div class="calc-row"><span>Ziel</span><b>{{ flight.arrival.label }}</b></div>
+    {% if flight.return_time %}<div class="calc-row"><span>Rückflug</span><b>{{ flight.return_time|dt }}</b></div>{% endif %}
+    <div class="calc-row"><span>Flugzeug</span><b>{{ flight.aircraft.label }}</b></div>
+    {% if flight.meeting_point and booking.status in ('paid', 'completed') %}<div class="calc-row"><span>Treffpunkt</span><b>{{ flight.meeting_point }}</b></div>{% endif %}
+    <a href="{{ url_for('flights.detail', flight_id=flight.id) }}">Zur Flugseite →</a>
+  </section>
+
+  <div class="action-bar">
+    {% if is_pilot and booking.status == 'pending' %}
+      <form method="post" action="{{ url_for('bookings.accept', booking_id=booking.id) }}">{{ csrf() }}<button class="btn btn-success btn-lg">Anfrage annehmen</button></form>
+      <form method="post" action="{{ url_for('bookings.decline', booking_id=booking.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-lg">Ablehnen</button></form>
+    {% endif %}
+    {% if not is_pilot and booking.status == 'accepted' %}
+      <a class="btn btn-accent btn-lg" href="{{ url_for('bookings.checkout', booking_id=booking.id) }}">Jetzt bezahlen</a>
+    {% endif %}
+    {% if not is_pilot and booking.status in ('pending', 'accepted', 'paid') and not flight.is_past %}
+      <form method="post" action="{{ url_for('bookings.cancel', booking_id=booking.id) }}" data-confirm="Buchung wirklich stornieren?">{{ csrf() }}<button class="btn btn-danger-ghost">Buchung stornieren</button></form>
+    {% endif %}
+  </div>
+
+  {% if booking.is_reviewable %}
+    <section class="box">
+      {% if my_review %}
+        <h2>Deine Bewertung</h2>
+        <div class="stars">{{ my_review.rating|stars }}</div>
+        <p>{{ my_review.comment }}</p>
+      {% else %}
+        <h2>{{ other.first_name }} bewerten</h2>
+        <form method="post" action="{{ url_for('bookings.review', booking_id=booking.id) }}">
+          {{ csrf() }}
+          <div class="star-input">
+            {% for i in range(5, 0, -1) %}<input type="radio" id="star{{ i }}" name="rating" value="{{ i }}" required><label for="star{{ i }}" title="{{ i }} Sterne">★</label>{% endfor %}
+          </div>
+          <label class="field"><span>Kommentar</span><textarea name="comment" rows="3" placeholder="Wie war der Flug?"></textarea></label>
+          <button class="btn btn-primary">Bewertung abschicken</button>
+        </form>
+      {% endif %}
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

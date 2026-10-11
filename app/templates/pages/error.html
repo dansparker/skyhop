@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Fehler {{ code }} – Skyhop{% endblock %}
+{% block content %}
+<div class="container page center error-page">
+  <div class="error-code">{{ code }}</div>
+  <h1>Turbulenzen!</h1>
+  <p class="lead">{{ message }}</p>
+  <a class="btn btn-primary" href="{{ url_for('main.index') }}">Zur Startseite</a>
+</div>
+{% endblock %}

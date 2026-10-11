@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import avatar, csrf %}
+{% block title %}Flugwünsche – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <div class="section-head">
+    <div>
+      <h1>Flugwünsche</h1>
+      <p class="lead">Passagiere suchen einen Flug – Pilot:innen können ihnen ein Angebot machen.</p>
+    </div>
+    <a class="btn btn-accent" href="{{ url_for('wishes.create') }}">+ Flugwunsch aufgeben</a>
+  </div>
+  <form class="inline-search" method="get">
+    <input name="q" value="{{ q }}" placeholder="Nach Ort oder ICAO filtern …">
+    <button class="btn btn-primary">Filtern</button>
+  </form>
+
+  {% if mine %}
+    <h2>Meine Flugwünsche</h2>
+    <div class="list">
+      {% for w in mine %}
+        <div class="list-item {% if not w.active %}faded{% endif %}">
+          <div class="grow"><b>{{ w.departure.city }} → {{ w.arrival.city if w.arrival else 'beliebig' }}</b>
+            <div class="small muted">{{ w.date_from.strftime('%d.%m.') }} – {{ w.date_to.strftime('%d.%m.%Y') }} · {{ w.seats }} Person(en){% if w.budget_per_seat %} · bis {{ w.budget_per_seat|eur }}/Platz{% endif %}</div></div>
+          {% if w.active %}
+            <form method="post" action="{{ url_for('wishes.close', wish_id=w.id) }}">{{ csrf() }}<button class="btn btn-ghost btn-sm">Beenden</button></form>
+          {% else %}<span class="status status-cancelled">beendet</span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <h2>Aktuelle Wünsche</h2>
+  <div class="card-grid">
+    {% for w in wishes %}
+      <article class="wish-card">
+        <div class="wish-route">{{ w.departure.icao }} <span>{{ w.departure.city }}</span> → {% if w.arrival %}{{ w.arrival.icao }} <span>{{ w.arrival.city }}</span>{% else %}<span>beliebig / Rundflug</span>{% endif %}</div>
+        <div class="small muted">📅 {{ w.date_from.strftime('%d.%m.') }} – {{ w.date_to.strftime('%d.%m.%Y') }} · 👤 {{ w.seats }}{% if w.budget_per_seat %} · 💶 bis {{ w.budget_per_seat|eur }}/Platz{% endif %}</div>
+        {% if w.message %}<p>„{{ w.message }}“</p>{% endif %}
+        <div class="wish-foot">
+          <span>{{ avatar(w.user, 'sm') }} {{ w.user.short_name }}</span>
+          {% if current_user.is_authenticated and current_user.is_pilot and current_user.id != w.user_id %}
+            <span>
+              <a class="btn btn-sm btn-ghost" href="{{ url_for('messages.start', user_id=w.user_id) }}">Kontaktieren</a>
+              <a class="btn btn-sm btn-primary" href="{{ url_for('flights.create', type='roundtrip' if not w.arrival else 'trip') }}">Flug anbieten</a>
+            </span>
+          {% endif %}
+        </div>
+      </article>
+    {% else %}
+      <div class="empty">Keine aktiven Flugwünsche gefunden.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

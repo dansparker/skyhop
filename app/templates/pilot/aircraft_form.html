@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Flugzeug – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>{{ 'Flugzeug bearbeiten' if aircraft else 'Flugzeug hinzufügen' }}</h1>
+  <form method="post" class="form-card">
+    {{ csrf() }}
+    <div class="field-row">
+      <label class="field"><span>Kennzeichen</span><input name="registration" required value="{{ form.get('registration', '') }}" placeholder="OE-KAB"></label>
+      <label class="field"><span>Baujahr</span><input type="number" name="year" min="1900" max="2100" value="{{ form.get('year') or '' }}"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>Hersteller</span><input name="manufacturer" required value="{{ form.get('manufacturer', '') }}" placeholder="Cessna, Piper, Diamond …"></label>
+      <label class="field"><span>Modell</span><input name="model" required value="{{ form.get('model', '') }}" placeholder="172 Skyhawk"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>Passagierplätze (ohne Pilot:in)</span><input type="number" name="seats" min="1" max="20" required value="{{ form.get('seats') or 3 }}"></label>
+      <label class="field"><span>Reisegeschwindigkeit (kt)</span><input type="number" name="cruise_speed_kt" min="40" max="400" value="{{ form.get('cruise_speed_kt') or 110 }}"></label>
+    </div>
+    <label class="field"><span>Beschreibung</span><textarea name="description" rows="3" placeholder="Ausstattung, Besonderheiten, Headsets …">{{ form.get('description') or '' }}</textarea></label>
+    <div class="form-actions">
+      <a class="btn btn-ghost" href="{{ url_for('pilot.aircraft_list') }}">Abbrechen</a>
+      <button class="btn btn-primary" type="submit">Speichern</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

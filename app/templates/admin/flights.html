@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Flüge – Admin – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <table class="table">
+    <thead><tr><th>Datum</th><th>Flug</th><th>Pilot:in</th><th>Plätze</th><th>Preis</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+      {% for f in flights %}
+        <tr>
+          <td>{{ f.departure_time|dt('short') }} {{ f.departure_time.year }}</td>
+          <td><a href="{{ url_for('flights.detail', flight_id=f.id) }}">{{ f.title }}</a><div class="small muted">{{ f.route_label }}</div></td>
+          <td>{{ f.pilot.name }}</td><td>{{ f.seats_booked }}/{{ f.seats_total }}</td><td>{{ f.price_per_seat|eur }}</td>
+          <td><span class="status status-{{ f.status }}">{{ f.status_label }}</span></td>
+          <td>{% if f.status == 'published' and not f.is_past %}
+            <form method="post" action="{{ url_for('flights.cancel', flight_id=f.id) }}" data-confirm="Flug als Admin absagen?">{{ csrf() }}<input type="hidden" name="reason" value="Durch Skyhop-Support abgesagt"><button class="btn btn-danger-ghost btn-sm">Absagen</button></form>
+          {% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

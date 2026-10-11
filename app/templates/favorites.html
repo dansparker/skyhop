@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_macros.html" import flight_card %}
+{% block title %}Merkliste – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Merkliste</h1>
+  {% if flights %}
+    <div class="card-grid">{% for f in flights %}{{ flight_card(f) }}{% endfor %}</div>
+  {% else %}
+    <div class="empty">Du hast noch keine Flüge gemerkt. <a href="{{ url_for('flights.search') }}">Flüge entdecken →</a></div>
+  {% endif %}
+</div>
+{% endblock %}

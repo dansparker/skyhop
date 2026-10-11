@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import flight_card, airport_datalist %}
+{% block title %}Flüge finden – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Flüge finden</h1>
+  <div class="search-layout">
+    <aside class="filters">
+      <form method="get" action="{{ url_for('flights.search') }}" id="filter-form">
+        <label class="field"><span>Von</span><input name="from" list="airports" value="{{ args.get('from', '') }}" placeholder="Stadt / ICAO"></label>
+        <label class="field"><span>Nach</span><input name="to" list="airports" value="{{ args.get('to', '') }}" placeholder="beliebig"></label>
+        <label class="field"><span>Umkreis</span>
+          <select name="radius">
+            {% for r, l in [(0, 'nur dieser Ort'), (25, '+ 25 km'), (50, '+ 50 km'), (100, '+ 100 km'), (200, '+ 200 km')] %}
+              <option value="{{ r }}" {% if args.get('radius', '0')|int == r %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>Ab</span><input type="date" name="date" value="{{ args.get('date', '') }}"></label>
+          <label class="field"><span>Bis</span><input type="date" name="date_to" value="{{ args.get('date_to', '') }}"></label>
+        </div>
+        <label class="field"><span>Flugart</span>
+          <select name="type">
+            <option value="">Alle</option>
+            {% for k, v in types.items() %}<option value="{{ k }}" {% if args.get('type') == k %}selected{% endif %}>{{ v }}</option>{% endfor %}
+          </select>
+        </label>
+        <div class="field-row">
+          <label class="field"><span>Personen</span>
+            <select name="seats">{% for i in range(1, 6) %}<option {% if args.get('seats', '1')|int == i %}selected{% endif %}>{{ i }}</option>{% endfor %}</select>
+          </label>
+          <label class="field"><span>Max. €/Platz</span><input type="number" min="0" name="max_price" value="{{ args.get('max_price', '') }}"></label>
+        </div>
+        <input type="hidden" name="sort" value="{{ sort }}">
+        <button class="btn btn-primary btn-block" type="submit">Filter anwenden</button>
+        <a class="btn btn-ghost btn-block" href="{{ url_for('flights.search') }}">Zurücksetzen</a>
+      </form>
+      {{ airport_datalist() }}
+    </aside>
+
+    <section class="results">
+      <div class="results-head">
+        <p><b>{{ results|length }}</b> {{ 'Flug' if results|length == 1 else 'Flüge' }} gefunden</p>
+        <div class="sort">
+          Sortieren:
+          {% for k, label in sorts.items() %}
+            {% set params = args.to_dict() %}{% set _ = params.update({'sort': k}) %}
+            <a class="{% if sort == k %}active{% endif %}" href="{{ url_for('flights.search', **params) }}">{{ label }}</a>
+          {% endfor %}
+        </div>
+      </div>
+      {% if results %}
+        <div id="results-map" class="map map-sm" data-routes='[{% for f in results %}{"id": {{ f.id }}, "title": {{ f.title|tojson }}, "url": "{{ url_for('flights.detail', flight_id=f.id) }}", "from": [{{ f.departure.lat }}, {{ f.departure.lon }}], "to": [{{ f.arrival.lat }}, {{ f.arrival.lon }}]}{% if not loop.last %},{% endif %}{% endfor %}]'></div>
+        <div class="card-grid card-grid-2">{% for f in results %}{{ flight_card(f, favorites) }}{% endfor %}</div>
+      {% else %}
+        <div class="empty">
+          <h3>Keine passenden Flüge 😕</h3>
+          <p>Probiere einen größeren Umkreis oder ein anderes Datum – oder gib einen Flugwunsch auf, damit Pilot:innen dich finden.</p>
+          <a class="btn btn-primary" href="{{ url_for('wishes.create') }}">Flugwunsch aufgeben</a>
+        </div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block head %}<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">{% endblock %}
+{% block scripts %}<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}FAQ – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose">
+  <h1>Häufige Fragen</h1>
+  {% set faqs = [
+    ('Ist Mitfliegen in einem Kleinflugzeug sicher?', 'Alle Pilot:innen auf Skyhop haben eine gültige Lizenz und ein Medical, die wir vor der Freischaltung prüfen. Zusätzlich helfen Bewertungen anderer Passagiere bei der Einschätzung. Die Pilot:in entscheidet zudem jederzeit, ob die Bedingungen (z. B. Wetter) einen sicheren Flug zulassen.'),
+    ('Was passiert bei schlechtem Wetter?', 'Sicherheit geht vor: Die Pilot:in kann den Flug jederzeit absagen. In diesem Fall erhältst du den vollen Betrag zurück.'),
+    ('Kann ich selbst stornieren?', 'Ja. Solange der Flug noch nicht stattgefunden hat, kannst du deine Buchung im Dashboard stornieren.'),
+    ('Warum ist der Preis so günstig?', 'Weil die Kosten geteilt werden. Pilot:innen dürfen mit Mitflügen keinen Gewinn machen – sie zahlen immer ihren eigenen Anteil.'),
+    ('Gibt es Gewichts- oder Gepäcklimits?', 'Kleinflugzeuge haben begrenzte Zuladung. Gib dein ungefähres Gewicht und dein Gepäck bei der Anfrage an – die Pilot:in berechnet dann Masse und Schwerpunkt.'),
+    ('Wie werde ich Pilot:in auf Skyhop?', 'Registriere dich, gib unter „Pilot:in werden“ deine Lizenzdaten an und lege nach der Freischaltung dein Flugzeug an.'),
+    ('Was ist ein Flugwunsch?', 'Wenn du keinen passenden Flug findest, kannst du einen Wunsch aufgeben (Ort, Zeitraum, Budget). Pilot:innen sehen ihn und du wirst automatisch benachrichtigt, wenn ein passender Flug online geht.'),
+  ] %}
+  {% for q, a in faqs %}
+    <details class="faq"><summary>{{ q }}</summary><p>{{ a }}</p></details>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Benachrichtigungen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Benachrichtigungen</h1>
+  <div class="list">
+    {% for n in items %}
+      <a class="list-item {% if n.id in unread_ids %}unread{% endif %}" href="{{ n.link or '#' }}">
+        <div class="grow">{{ n.text }}<div class="small muted">{{ n.created_at|dt('rel') }}</div></div>
+        {% if n.id in unread_ids %}<span class="dot"></span>{% endif %}
+      </a>
+    {% else %}
+      <div class="empty">Keine Benachrichtigungen.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

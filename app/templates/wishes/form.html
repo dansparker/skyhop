@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, airport_datalist %}
+{% block title %}Flugwunsch aufgeben – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Flugwunsch aufgeben</h1>
+  <p class="lead">Sag uns, wohin du fliegen möchtest. Wir benachrichtigen dich, sobald ein passender Flug online geht – und Pilot:innen können dich direkt kontaktieren.</p>
+  <form method="post" class="form-card">
+    {{ csrf() }}
+    <div class="field-row">
+      <label class="field"><span>Von</span><input name="departure" list="airports" required value="{{ form.get('departure', '') }}" placeholder="Stadt oder ICAO"></label>
+      <label class="field"><span>Nach (optional)</span><input name="arrival" list="airports" value="{{ form.get('arrival', '') }}" placeholder="leer = Rundflug / egal"></label>
+    </div>
+    {{ airport_datalist() }}
+    <div class="field-row">
+      <label class="field"><span>Frühestens</span><input type="date" name="date_from" required value="{{ form.get('date_from', '') }}" min="{{ now.strftime('%Y-%m-%d') }}"></label>
+      <label class="field"><span>Spätestens</span><input type="date" name="date_to" required value="{{ form.get('date_to', '') }}" min="{{ now.strftime('%Y-%m-%d') }}"></label>
+    </div>
+    <div class="field-row">
+      <label class="field"><span>Personen</span><input type="number" name="seats" min="1" max="9" required value="{{ form.get('seats', 1) }}"></label>
+      <label class="field"><span>Budget pro Platz (€, optional)</span><input type="number" name="budget_per_seat" min="0" value="{{ form.get('budget_per_seat', '') }}"></label>
+    </div>
+    <label class="field"><span>Nachricht an Pilot:innen</span><textarea name="message" rows="3" placeholder="Anlass, Flexibilität, Gepäck …">{{ form.get('message', '') }}</textarea></label>
+    <div class="form-actions"><button class="btn btn-accent btn-lg" type="submit">Flugwunsch veröffentlichen</button></div>
+  </form>
+</div>
+{% endblock %}

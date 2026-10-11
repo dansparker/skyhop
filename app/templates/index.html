@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% from "_macros.html" import flight_card, avatar, airport_datalist %}
+{% block body_class %}home{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-clouds"></div>
+  <div class="container hero-inner">
+    <h1>Steig ein ins Cockpit.<br><span>Flieg mit Pilot:innen aus deiner Nähe.</span></h1>
+    <p class="hero-sub">Rundflüge, Tagesausflüge und Streckenflüge in Kleinflugzeugen – zum geteilten Selbstkostenpreis.</p>
+    <form class="search-box" action="{{ url_for('flights.search') }}" method="get">
+      <label class="field">
+        <span>Von</span>
+        <input name="from" list="airports" placeholder="Stadt oder Flugplatz, z. B. Wien">
+      </label>
+      <label class="field">
+        <span>Nach</span>
+        <input name="to" list="airports" placeholder="Egal – überrasch mich">
+      </label>
+      <label class="field field-sm">
+        <span>Datum</span>
+        <input type="date" name="date" min="{{ now.strftime('%Y-%m-%d') }}">
+      </label>
+      <label class="field field-xs">
+        <span>Personen</span>
+        <select name="seats">{% for i in range(1, 5) %}<option>{{ i }}</option>{% endfor %}</select>
+      </label>
+      <input type="hidden" name="radius" value="50">
+      <button class="btn btn-accent btn-lg" type="submit">Flüge suchen</button>
+    </form>
+    {{ airport_datalist() }}
+    <div class="hero-tags">
+      <a href="{{ url_for('flights.search', type='roundtrip') }}">⟲ Rundflüge</a>
+      <a href="{{ url_for('flights.search', type='daytrip') }}">☀ Tagesausflüge</a>
+      <a href="{{ url_for('flights.search', type='trip') }}">✈ Streckenflüge</a>
+    </div>
+  </div>
+</section>
+
+<section class="stats-strip">
+  <div class="container stats-grid">
+    <div><b>{{ stats.pilots }}</b><span>verifizierte Pilot:innen</span></div>
+    <div><b>{{ stats.flights }}</b><span>angebotene Flüge</span></div>
+    <div><b>{{ stats.reviews }}</b><span>Bewertungen</span></div>
+    <div><b>bis zu 75 %</b><span>günstiger als ein Charter</span></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Bald startende Flüge</h2>
+      <a href="{{ url_for('flights.search') }}">Alle Flüge →</a>
+    </div>
+    {% if featured %}
+      <div class="card-grid">{% for f in featured %}{{ flight_card(f) }}{% endfor %}</div>
+    {% else %}
+      <div class="empty">Aktuell sind keine Flüge online. <a href="{{ url_for('wishes.create') }}">Gib einen Flugwunsch auf!</a></div>
+    {% endif %}
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="center">So funktioniert Skyhop</h2>
+    <div class="steps">
+      <div class="step"><div class="step-icon">🔎</div><h3>1. Flug finden</h3><p>Suche nach Abflugort, Ziel und Datum oder stöbere durch Rundflüge in deiner Nähe.</p></div>
+      <div class="step"><div class="step-icon">💬</div><h3>2. Anfragen</h3><p>Schick der Pilotin oder dem Piloten eine Buchungsanfrage und stell deine Fragen im Chat.</p></div>
+      <div class="step"><div class="step-icon">💳</div><h3>3. Kosten teilen</h3><p>Nach der Bestätigung zahlst du sicher über Skyhop. Der Pilot trägt seinen Kostenanteil selbst.</p></div>
+      <div class="step"><div class="step-icon">🛩</div><h3>4. Abheben</h3><p>Genieß den Flug – und bewerte danach deine Crew.</p></div>
+    </div>
+  </div>
+</section>
+
+{% if roundtrips %}
+<section class="section">
+  <div class="container">
+    <div class="section-head">
+      <h2>Rundflüge – zurück zum Abendessen</h2>
+      <a href="{{ url_for('flights.search', type='roundtrip') }}">Alle Rundflüge →</a>
+    </div>
+    <div class="card-grid">{% for f in roundtrips %}{{ flight_card(f) }}{% endfor %}</div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section section-split">
+  <div class="container split">
+    <div>
+      <h2>Du bist Pilot:in?</h2>
+      <p class="lead">Teile deine Flugkosten mit Passagieren und fliege öfter. Skyhop berechnet automatisch einen fairen Preis nach EU-Kostenteilungsregeln – du zahlst immer deinen eigenen Anteil.</p>
+      <ul class="checklist">
+        <li>Kostenlos registrieren und Lizenz verifizieren lassen</li>
+        <li>Flug in 2 Minuten anlegen</li>
+        <li>Anfragen annehmen oder ablehnen – du entscheidest</li>
+        <li>Flugwünsche von Passagieren entdecken</li>
+      </ul>
+      <a class="btn btn-primary" href="{{ url_for('pilot.become') }}">Jetzt als Pilot:in starten</a>
+    </div>
+    <div class="calc-card">
+      <h3>Beispielrechnung</h3>
+      <div class="calc-row"><span>Charter, Treibstoff, Landegebühren</span><b>400 €</b></div>
+      <div class="calc-row"><span>Passagiere</span><b>3</b></div>
+      <div class="calc-row"><span>Anteil pro Person (3 + Pilot:in)</span><b>100 €</b></div>
+      <div class="calc-row total"><span>Du sparst</span><b>300 €</b></div>
+    </div>
+  </div>
+</section>
+
+{% if reviews %}
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="center">Was unsere Passagiere sagen</h2>
+    <div class="review-grid">
+      {% for r in reviews %}
+        <figure class="review-card">
+          <div class="stars">{{ r.rating|stars }}</div>
+          <blockquote>„{{ r.comment }}“</blockquote>
+          <figcaption>{{ avatar(r.author, 'sm') }} <span><b>{{ r.author.short_name }}</b> über {{ r.target.first_name }}</span></figcaption>
+        </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

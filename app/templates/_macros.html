@@ -1,0 +1,61 @@
+{% macro avatar(user, size='') -%}
+<span class="avatar {% if size %}avatar-{{ size }}{% endif %}" style="background: {{ user.avatar_color }}">{{ user.initials }}</span>
+{%- endmacro %}
+
+{% macro rating(user) -%}
+{% set r = user.rating %}
+{% if r %}<span class="rating"><span class="stars">{{ r|stars }}</span> {{ r }} <span class="muted">({{ user.rating_count }})</span></span>
+{% else %}<span class="muted small">Noch keine Bewertungen</span>{% endif %}
+{%- endmacro %}
+
+{% macro flight_card(f, favorites=None) -%}
+<article class="flight-card">
+  <a class="flight-card-link" href="{{ url_for('flights.detail', flight_id=f.id) }}" aria-label="{{ f.title }}"></a>
+  <div class="flight-card-top type-{{ f.flight_type }}">
+    <span class="chip">{{ f.type_label }}</span>
+    <div class="flight-card-date">
+      <strong>{{ f.departure_time|dt('short') }}</strong>
+      <span>{{ f.departure_time|dt('time') }} Uhr</span>
+    </div>
+  </div>
+  <div class="flight-card-body">
+    <h3>{{ f.title }}</h3>
+    <div class="route">
+      <span><b>{{ f.departure.icao }}</b> {{ f.departure.city }}</span>
+      {% if f.departure_id != f.arrival_id %}
+        <span class="route-arrow">✈</span>
+        <span><b>{{ f.arrival.icao }}</b> {{ f.arrival.city }}</span>
+      {% else %}
+        <span class="route-arrow">⟲</span><span class="muted">Rundflug</span>
+      {% endif %}
+    </div>
+    <div class="flight-card-meta">
+      <span>⏱ {{ f.duration_label }}</span>
+      <span>💺 {{ f.seats_available }} frei</span>
+      <span>🛩 {{ f.aircraft.manufacturer }} {{ f.aircraft.model }}</span>
+    </div>
+  </div>
+  <div class="flight-card-footer">
+    <div class="pilot-mini">
+      {{ avatar(f.pilot, 'sm') }}
+      <div>
+        <div class="small"><b>{{ f.pilot.first_name }}</b></div>
+        {% if f.pilot.rating %}<div class="small"><span class="stars">★</span> {{ f.pilot.rating }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="price"><b>{{ f.price_per_seat|eur }}</b><span>pro Platz</span></div>
+  </div>
+</article>
+{%- endmacro %}
+
+{% macro csrf() -%}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{%- endmacro %}
+
+{% macro airport_datalist() -%}
+<datalist id="airports">
+  {% for a in airport_list() %}<option value="{{ a.label }}"></option>{% endfor %}
+</datalist>
+{%- endmacro %}
+
+{% macro booking_status(b) -%}
+<span class="status status-{{ b.status }}">{{ b.status_label }}</span>
+{%- endmacro %}

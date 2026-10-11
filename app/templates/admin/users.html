@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Nutzer:innen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <form class="inline-search" method="get"><input name="q" value="{{ q }}" placeholder="Name oder E-Mail"><button class="btn btn-primary">Suchen</button></form>
+  <table class="table">
+    <thead><tr><th>Name</th><th>E-Mail</th><th>Ort</th><th>Pilotenstatus</th><th>Registriert</th></tr></thead>
+    <tbody>
+      {% for u in users %}
+        <tr><td><a href="{{ url_for('profile.public', user_id=u.id) }}">{{ u.name }}</a>{% if u.is_admin %} <span class="chip chip-muted">Admin</span>{% endif %}</td><td>{{ u.email }}</td><td>{{ u.city or '–' }}</td><td>{{ u.pilot_status }}</td><td>{{ u.created_at|dt('date') }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import booking_status %}
+{% block title %}Admin – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <div class="kpis">
+    <div class="kpi"><b>{{ stats.users }}</b><span>Nutzer:innen</span></div>
+    <div class="kpi"><b>{{ stats.pilots }}</b><span>verifizierte Pilot:innen</span></div>
+    <div class="kpi {% if stats.pending_pilots %}kpi-alert{% endif %}"><b>{{ stats.pending_pilots }}</b><span>offene Verifizierungen</span></div>
+    <div class="kpi"><b>{{ stats.flights }}</b><span>aktive Flüge</span></div>
+    <div class="kpi"><b>{{ stats.bookings }}</b><span>bezahlte Buchungen</span></div>
+    <div class="kpi"><b>{{ stats.volume|eur }}</b><span>Buchungsvolumen</span></div>
+    <div class="kpi"><b>{{ stats.fees|eur }}</b><span>Servicegebühren</span></div>
+    <div class="kpi"><b>{{ stats.reviews }}</b><span>Bewertungen</span></div>
+  </div>
+  <h2>Letzte Buchungen</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>Flug</th><th>Passagier</th><th>Pilot:in</th><th>Betrag</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for b in latest_bookings %}
+        <tr><td><a href="{{ url_for('bookings.detail', booking_id=b.id) }}">{{ b.id }}</a></td><td>{{ b.flight.title }}</td><td>{{ b.passenger.name }}</td><td>{{ b.flight.pilot.name }}</td><td>{{ b.total_price|eur }}</td><td>{{ booking_status(b) }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
