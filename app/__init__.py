@@ -39,6 +39,13 @@ def create_app(config=None):
         # Payments (Stripe Checkout). Without STRIPE_SECRET_KEY bookings use demo payments.
         STRIPE_SECRET_KEY=env("STRIPE_SECRET_KEY", ""),
         STRIPE_WEBHOOK_SECRET=env("STRIPE_WEBHOOK_SECRET", ""),
+        # Direct PayPal (REST API v2). PAYPAL_MODE: sandbox | live
+        PAYPAL_CLIENT_ID=env("PAYPAL_CLIENT_ID", ""),
+        PAYPAL_CLIENT_SECRET=env("PAYPAL_CLIENT_SECRET", ""),
+        PAYPAL_MODE=env("PAYPAL_MODE", "sandbox"),
+        PAYPAL_WEBHOOK_ID=env("PAYPAL_WEBHOOK_ID", ""),
+        # Optional: which configured providers to offer and in which order, e.g. "paypal,stripe"
+        PAYMENT_PROVIDERS=env("PAYMENT_PROVIDERS", "stripe,paypal"),
     )
     if config:
         app.config.update(config)
@@ -105,7 +112,7 @@ def _add_missing_columns():
 
 
 # Endpoints that receive POSTs from third parties and authenticate themselves (signature)
-CSRF_EXEMPT = {"bookings.stripe_webhook"}
+CSRF_EXEMPT = {"bookings.stripe_webhook", "bookings.paypal_webhook"}
 
 
 def _register_csrf(app):

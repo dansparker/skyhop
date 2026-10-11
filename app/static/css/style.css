@@ -413,3 +413,11 @@ details.faq p { margin: 10px 0 0; }
 .nl-consent input { margin-top: 3px; }
 .login-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: .88em; }
+
+/* Payment provider choice */
+.pay-options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+.pay-option { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; cursor: pointer; }
+.pay-option:has(input:checked) { border-color: var(--blue); background: var(--blue-50); }
+.pay-option small { display: block; color: var(--muted); font-size: .8rem; }
+.pay-logo { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 32px; border-radius: 6px; background: #f1f5f9; font-weight: 800; font-size: .9rem; }
+.pay-logo-paypal { background: #ffc439; color: #003087; font-style: italic; }

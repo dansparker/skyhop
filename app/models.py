@@ -249,6 +249,8 @@ class Booking(db.Model):
     payment_provider = db.Column(db.String(20))  # "stripe" or "demo"
     stripe_session_id = db.Column(db.String(255), index=True)
     stripe_payment_intent = db.Column(db.String(255))
+    paypal_order_id = db.Column(db.String(64), index=True)
+    paypal_capture_id = db.Column(db.String(64))
     refund_status = db.Column(db.String(20))  # None, "refunded", "failed", "manual"
     refunded_at = db.Column(db.DateTime)
 

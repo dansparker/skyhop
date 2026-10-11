@@ -7,11 +7,11 @@
   {% include "admin/_nav.html" %}
   {% if open_refunds %}
     <h2>Offene Erstattungen ({{ open_refunds|length }})</h2>
-    <p class="muted small">Automatische Erstattung fehlgeschlagen oder nicht möglich – bitte im Stripe-Dashboard prüfen und danach als erstattet markieren.</p>
+    <p class="muted small">Automatische Erstattung fehlgeschlagen oder nicht möglich – bitte im Stripe- bzw. PayPal-Dashboard prüfen und danach als erstattet markieren.</p>
     {% for b in open_refunds %}
       <div class="box request-row">
         <div class="grow"><a href="{{ url_for('bookings.detail', booking_id=b.id) }}"><b>#{{ b.id }}</b></a> · {{ b.passenger.name }} · {{ b.total_price|eur }}
-          <div class="small muted">{{ b.flight.title }} · Status: {{ b.refund_status or 'offen' }}{% if b.stripe_payment_intent %} · {{ b.stripe_payment_intent }}{% endif %}</div></div>
+          <div class="small muted">{{ b.flight.title }} · Status: {{ b.refund_status or 'offen' }}{% if b.stripe_payment_intent %} · {{ b.stripe_payment_intent }}{% endif %}{% if b.paypal_capture_id %} · PayPal {{ b.paypal_capture_id }}{% endif %}</div></div>
         <form method="post" action="{{ url_for('admin.mark_refunded', booking_id=b.id) }}">{{ csrf() }}<button class="btn btn-success btn-sm">Als erstattet markieren</button></form>
       </div>
     {% endfor %}

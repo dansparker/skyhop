@@ -1,10 +1,15 @@
-"""Payments via Stripe Checkout. Without STRIPE_SECRET_KEY the app falls back to demo payments."""
+"""Payments: Stripe Checkout (cards, PayPal via Stripe, wallets, SEPA …) and/or direct PayPal.
+
+Which providers are offered depends on the configured keys (optionally narrowed/ordered with
+PAYMENT_PROVIDERS="stripe,paypal"). Without any keys the app falls back to demo payments.
+"""
 import logging
 from datetime import datetime
 
 import stripe
 from flask import current_app, url_for
 
+from . import paypal
 from .extensions import db
 from .mailer import absolute_url
 from .models import Booking
@@ -12,8 +17,23 @@ from .models import Booking
 log = logging.getLogger("skyhop.payments")
 
 
+PROVIDER_LABELS = {
+    "stripe": ("Karte, PayPal, Apple Pay, Google Pay, SEPA …", "Sichere Bezahlseite von Stripe"),
+    "paypal": ("PayPal", "Direkt mit deinem PayPal-Konto bezahlen"),
+    "demo": ("Demo-Zahlung", "Kein Zahlungsanbieter konfiguriert – es wird kein Geld bewegt"),
+}
+
+
 def stripe_enabled():
     return bool(current_app.config.get("STRIPE_SECRET_KEY"))
+
+
+def available_providers():
+    """Configured payment providers in display order; ["demo"] if none is configured."""
+    configured = {"stripe": stripe_enabled(), "paypal": paypal.enabled()}
+    wanted = [p.strip() for p in (current_app.config.get("PAYMENT_PROVIDERS") or "stripe,paypal").split(",")]
+    providers = [p for p in wanted if configured.get(p)]
+    return providers or ["demo"]
 
 
 def _client():
@@ -42,7 +62,7 @@ def create_checkout_session(booking):
         "metadata": {"booking_id": str(booking.id)},
         "payment_intent_data": {"metadata": {"booking_id": str(booking.id)}},
         "success_url": success + "?session_id={CHECKOUT_SESSION_ID}",
-        "cancel_url": absolute_url(url_for("bookings.checkout", booking_id=booking.id)),
+        "cancel_url": absolute_url(url_for("bookings.checkout", booking_id=booking.id, abgebrochen=1)),
         "locale": "de",
     })
     booking.payment_provider = "stripe"
@@ -51,23 +71,33 @@ def create_checkout_session(booking):
     return session.url
 
 
-def mark_paid(booking, provider, payment_intent=None):
-    """Mark a booking as paid (idempotent). Returns True if the status changed."""
+def _store_reference(booking, provider, reference):
+    booking.payment_provider = provider
+    if provider == "stripe":
+        booking.stripe_payment_intent = reference
+    elif provider == "paypal":
+        booking.paypal_capture_id = reference
+
+
+def mark_paid(booking, provider, reference=None):
+    """Mark a booking as paid (idempotent). reference: Stripe PaymentIntent or PayPal capture id.
+
+    Returns True if the status changed.
+    """
     from .utils import notify
 
-    if booking.status == "paid" or booking.status == "completed":
+    if booking.status in ("paid", "completed"):
         return False
     if booking.status != "accepted":
         # Paid although no longer payable (e.g. cancelled meanwhile) → refund immediately
-        booking.payment_provider = provider
-        booking.stripe_payment_intent = payment_intent
+        _store_reference(booking, provider, reference)
+        booking.paid_at = booking.paid_at or datetime.utcnow()
         refund(booking)
         db.session.commit()
         return False
     booking.status = "paid"
     booking.paid_at = datetime.utcnow()
-    booking.payment_provider = provider
-    booking.stripe_payment_intent = payment_intent
+    _store_reference(booking, provider, reference)
     flight = booking.flight
     link = url_for("bookings.detail", booking_id=booking.id)
     notify(flight.pilot, f"{booking.passenger.short_name} hat {booking.seats} Platz/Plätze für „{flight.title}“ bezahlt.",
@@ -115,20 +145,78 @@ def handle_webhook(payload, sig_header):
 
 
 def refund(booking):
-    """Refund a paid booking in full. Does not commit. Returns True on success."""
-    if booking.payment_provider == "stripe" and booking.stripe_payment_intent:
-        if not stripe_enabled():
-            booking.refund_status = "manual"
-            return False
-        try:
+    """Refund a paid booking in full via its provider. Does not commit. Returns True on success."""
+    try:
+        if booking.payment_provider == "stripe" and booking.stripe_payment_intent:
+            if not stripe_enabled():
+                booking.refund_status = "manual"
+                return False
             _client().v1.refunds.create(params={
                 "payment_intent": booking.stripe_payment_intent,
                 "metadata": {"booking_id": str(booking.id)},
             })
-        except stripe.StripeError:
-            log.exception("Erstattung für Buchung %s fehlgeschlagen", booking.id)
-            booking.refund_status = "failed"
-            return False
+        elif booking.payment_provider == "paypal" and booking.paypal_capture_id:
+            if not paypal.enabled():
+                booking.refund_status = "manual"
+                return False
+            paypal.refund_capture(booking.paypal_capture_id)
+    except (stripe.StripeError, paypal.PayPalError, OSError):
+        log.exception("Erstattung für Buchung %s fehlgeschlagen", booking.id)
+        booking.refund_status = "failed"
+        return False
     booking.refund_status = "refunded"
     booking.refunded_at = datetime.utcnow()
     return True
+
+
+# --- PayPal (direct) ----------------------------------------------------------------------------
+
+def create_paypal_order(booking):
+    """Create a PayPal order for an accepted booking and return the approval URL."""
+    order_id, approval_url = paypal.create_order(
+        booking,
+        return_url=absolute_url(url_for("bookings.paypal_return", booking_id=booking.id)),
+        cancel_url=absolute_url(url_for("bookings.checkout", booking_id=booking.id, abgebrochen=1)),
+    )
+    booking.payment_provider = "paypal"
+    booking.paypal_order_id = order_id
+    db.session.commit()
+    return approval_url
+
+
+def capture_paypal_order(booking, order_id):
+    """Capture an approved PayPal order (return redirect or webhook) and mark the booking paid."""
+    if booking.status != "accepted" or order_id != booking.paypal_order_id:
+        return booking  # already paid, cancelled meanwhile (approval simply expires) or foreign order
+    status, capture_id = paypal.capture_order(order_id)
+    if status == "COMPLETED":
+        mark_paid(booking, "paypal", capture_id)
+    elif capture_id:  # e.g. PENDING (eCheck/review) – completion arrives via webhook
+        booking.paypal_capture_id = capture_id
+        db.session.commit()
+    return booking
+
+
+def handle_paypal_webhook(headers, event):
+    """Verify and process a PayPal webhook event (parsed JSON). Raises PayPalError on bad input."""
+    if not paypal.verify_webhook(headers, event):
+        raise paypal.PayPalError("Ungültige Webhook-Signatur")
+    etype = event.get("event_type")
+    res = event.get("resource") or {}
+    if etype == "CHECKOUT.ORDER.APPROVED":
+        # Buyer approved but never came back to our return URL → capture server-side
+        booking = Booking.query.filter_by(paypal_order_id=res.get("id")).first()
+        if booking:
+            capture_paypal_order(booking, res.get("id"))
+    elif etype == "PAYMENT.CAPTURE.COMPLETED":
+        order_id = (res.get("supplementary_data") or {}).get("related_ids", {}).get("order_id")
+        booking = Booking.query.filter_by(paypal_order_id=order_id).first() if order_id else None
+        if booking and str(booking.id) == str(res.get("custom_id", booking.id)):
+            mark_paid(booking, "paypal", res.get("id"))
+    elif etype == "PAYMENT.CAPTURE.REFUNDED":
+        booking = Booking.query.filter_by(paypal_capture_id=res.get("id")).first()
+        if booking and booking.refund_status != "refunded":
+            booking.refund_status = "refunded"
+            booking.refunded_at = datetime.utcnow()
+            db.session.commit()
+    return etype

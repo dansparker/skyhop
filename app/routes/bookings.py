@@ -4,7 +4,7 @@ import stripe
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from .. import payments
+from .. import payments, paypal
 from ..extensions import db
 from ..models import Booking, Flight, Review
 from ..utils import confirmed_required, get_or_create_conversation, notify, parse_int
@@ -147,18 +147,62 @@ def checkout(booking_id):
         if booking.flight.is_past:
             flash("Dieser Flug hat bereits stattgefunden.", "warning")
             return redirect(url_for("bookings.detail", booking_id=booking.id))
-        if payments.stripe_enabled():
-            try:
+        providers = payments.available_providers()
+        provider = request.form.get("provider") if request.form.get("provider") in providers else providers[0]
+        try:
+            if provider == "stripe":
                 return redirect(payments.create_checkout_session(booking), code=303)
-            except stripe.StripeError:
-                current_app.logger.exception("Stripe-Checkout für Buchung %s fehlgeschlagen", booking.id)
-                flash("Der Zahlungsdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.", "danger")
-                return redirect(url_for("bookings.checkout", booking_id=booking.id))
+            if provider == "paypal":
+                return redirect(payments.create_paypal_order(booking), code=303)
+        except (stripe.StripeError, paypal.PayPalError, OSError):
+            current_app.logger.exception("Checkout (%s) für Buchung %s fehlgeschlagen", provider, booking.id)
+            flash("Der Zahlungsdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.", "danger")
+            return redirect(url_for("bookings.checkout", booking_id=booking.id))
+        if provider != "demo":
+            abort(400)
         payments.mark_paid(booking, "demo")
         flash("Zahlung erfolgreich – du fliegst mit! ✈️", "success")
         return redirect(url_for("bookings.detail", booking_id=booking.id))
+    if request.args.get("abgebrochen"):
+        flash("Die Zahlung wurde abgebrochen. Du kannst es jederzeit erneut versuchen.", "info")
+    providers = payments.available_providers()
     return render_template("bookings/checkout.html", booking=booking, flight=booking.flight,
-                           stripe_enabled=payments.stripe_enabled())
+                           providers=providers, labels=payments.PROVIDER_LABELS)
+
+
+@bp.route("/buchungen/<int:booking_id>/paypal-zurueck")
+@login_required
+def paypal_return(booking_id):
+    booking = _get_booking_for_member(booking_id)
+    order_id = request.args.get("token", "")
+    if booking.passenger_id != current_user.id or not order_id or order_id != booking.paypal_order_id:
+        abort(403)
+    try:
+        payments.capture_paypal_order(booking, order_id)
+    except (paypal.PayPalError, OSError) as e:
+        current_app.logger.exception("PayPal-Capture für Buchung %s fehlgeschlagen", booking.id)
+        if isinstance(e, paypal.PayPalError) and e.issue == "INSTRUMENT_DECLINED":
+            flash("PayPal hat die Zahlungsquelle abgelehnt. Bitte wähle eine andere und versuche es erneut.", "danger")
+            return redirect(url_for("bookings.checkout", booking_id=booking.id))
+    db.session.refresh(booking)
+    if booking.status == "paid":
+        flash("Zahlung erfolgreich – du fliegst mit! ✈️", "success")
+    else:
+        flash("Deine Zahlung wird noch verarbeitet. Du bekommst eine Bestätigung, sobald sie eingegangen ist.", "info")
+    return redirect(url_for("bookings.detail", booking_id=booking.id))
+
+
+@bp.route("/paypal/webhook", methods=["POST"])
+def paypal_webhook():
+    event = request.get_json(silent=True)
+    if not isinstance(event, dict):
+        return {"error": "invalid"}, 400
+    try:
+        event_type = payments.handle_paypal_webhook(request.headers, event)
+    except (paypal.PayPalError, OSError) as e:
+        current_app.logger.warning("Ungültiger PayPal-Webhook: %s", e)
+        return {"error": "invalid"}, 400
+    return {"received": event_type}, 200
 
 
 @bp.route("/buchungen/<int:booking_id>/zahlung-erfolgreich")

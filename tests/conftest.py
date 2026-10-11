@@ -9,7 +9,8 @@ from app.models import Aircraft, Airport, User
 @pytest.fixture
 def app():
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", "CSRF_ENABLED": False,
-                      "STRIPE_SECRET_KEY": "", "STRIPE_WEBHOOK_SECRET": "", "MAIL_SERVER": ""})
+                      "STRIPE_SECRET_KEY": "", "STRIPE_WEBHOOK_SECRET": "", "MAIL_SERVER": "",
+                      "PAYPAL_CLIENT_ID": "", "PAYPAL_CLIENT_SECRET": "", "PAYMENT_PROVIDERS": "stripe,paypal"})
     with app.app_context():
         yield app
         _db.session.remove()

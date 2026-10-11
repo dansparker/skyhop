@@ -24,9 +24,11 @@ EU-Kostenteilungsregeln.
 - Anfragen annehmen/ablehnen, Flug bearbeiten, absagen (mit automatischer Erstattung) oder als durchgeführt markieren
 - Dashboard mit offenen Anfragen, Kostenbeteiligung und Ø-Bewertung
 
-**Zahlungen (Stripe)**
-- Bezahlung über **Stripe Checkout** (Karte, Apple/Google Pay, SEPA, … – Skyhop sieht keine Zahlungsdaten)
-- Bestätigung über Success-Redirect **und** signierten Webhook (idempotent)
+**Zahlungen (Stripe und/oder PayPal)**
+- Bezahlung über **Stripe Checkout** (Karte, **PayPal**, Apple/Google Pay, SEPA, … – Skyhop sieht keine Zahlungsdaten)
+- Alternativ bzw. zusätzlich **PayPal direkt** (REST API v2, eigenes PayPal-Händlerkonto)
+- Sind beide konfiguriert, wählen Passagiere die Zahlungsart; Auswahl/Reihenfolge per `PAYMENT_PROVIDERS`
+- Bestätigung über Rückleitung **und** verifizierte Webhooks (idempotent, auch wenn der Käufer den Browser schließt)
 - Automatische **Erstattung** bei Storno durch Passagier oder Absage durch Pilot:in; Zahlungen für bereits
   stornierte Buchungen werden sofort zurücküberwiesen
 - Admin-Übersicht über Zahlungen und fehlgeschlagene Erstattungen
@@ -54,7 +56,7 @@ EU-Kostenteilungsregeln.
 
 ## Tech-Stack
 
-Python 3.11+ · Flask · Flask-SQLAlchemy (SQLite) · Flask-Login · Jinja2 · Stripe · SMTP · Vanilla JS · Leaflet
+Python 3.11+ · Flask · Flask-SQLAlchemy (SQLite) · Flask-Login · Jinja2 · Stripe · PayPal · SMTP · Vanilla JS · Leaflet
 
 ## Schnellstart
 
@@ -102,6 +104,8 @@ Alle Variablen mit Erklärung stehen in [`.env.example`](.env.example). Die wich
 | `BASE_URL`                                 | Öffentliche URL – für Links in E-Mails und Stripe-Redirects  |
 | `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_DEFAULT_SENDER` | SMTP-Versand |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout + Webhook                                  |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`, `PAYPAL_WEBHOOK_ID` | PayPal direkt (REST API v2) |
+| `PAYMENT_PROVIDERS`                        | Angebotene Anbieter + Reihenfolge, z. B. `stripe,paypal`     |
 | `DATABASE_URL`                             | SQLAlchemy-URL, Standard: `instance/skyhop.db`               |
 | `TRUST_PROXY`                              | `1` hinter einem Reverse-Proxy (korrekte Client-IPs)         |
 
@@ -115,7 +119,27 @@ Alle Variablen mit Erklärung stehen in [`.env.example`](.env.example). Die wich
    anlegen (Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`).
 4. Testkarte `4242 4242 4242 4242`, beliebiges Datum in der Zukunft, beliebige Prüfziffer.
 
-> Auszahlungen an Pilot:innen sind noch nicht automatisiert – dafür wäre **Stripe Connect** der nächste Schritt.
+### PayPal einrichten
+
+**Variante 1 – PayPal über Stripe (empfohlen, kein Code):** Im Stripe-Dashboard unter
+*Einstellungen → Zahlungsmethoden* PayPal aktivieren. Verfügbar für Stripe-Konten in EWR, UK und CH. PayPal
+erscheint dann automatisch auf der Stripe-Bezahlseite; Erstattungen und Webhooks laufen über Stripe.
+
+**Variante 2 – PayPal direkt:**
+
+1. Unter <https://developer.paypal.com/dashboard/applications> eine App anlegen (Sandbox) und
+   `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` eintragen, `PAYPAL_MODE=sandbox`.
+2. Für die App einen Webhook auf `<BASE_URL>/paypal/webhook` anlegen (Events `CHECKOUT.ORDER.APPROVED`,
+   `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.REFUNDED`) und dessen ID als `PAYPAL_WEBHOOK_ID` eintragen.
+   Lokal braucht der Webhook eine öffentliche URL (z. B. per ngrok/Cloudflare Tunnel) – die Zahlung selbst
+   funktioniert auch ohne, da beim Zurückkehren direkt abgebucht wird.
+3. Mit einem Sandbox-Käuferkonto aus dem Developer-Dashboard bezahlen.
+4. Für den Livebetrieb Live-Zugangsdaten eintragen und `PAYPAL_MODE=live` setzen.
+
+Beide Varianten lassen sich kombinieren: `PAYMENT_PROVIDERS=stripe,paypal` zeigt beide Optionen,
+`PAYMENT_PROVIDERS=paypal` nur PayPal direkt.
+
+> Auszahlungen an Pilot:innen sind noch nicht automatisiert – dafür wären **Stripe Connect** bzw. **PayPal Payouts** der nächste Schritt.
 
 ### E-Mail einrichten
 

@@ -46,7 +46,7 @@
       <div class="calc-row small muted"><span>davon Skyhop-Servicegebühr</span><span>{{ booking.service_fee|eur }}</span></div>
       {% if is_pilot %}<div class="calc-row total"><span>Kostenbeteiligung für dich</span><b>{{ booking.pilot_payout|eur }}</b></div>
       {% else %}<div class="calc-row total"><span>Gesamt</span><b>{{ booking.total_price|eur }}</b></div>{% endif %}
-      {% if booking.paid_at %}<p class="small muted">Bezahlt am {{ booking.paid_at|dt('date') }}{% if booking.payment_provider == 'stripe' %} über Stripe{% elif booking.payment_provider == 'demo' %} (Demo){% endif %}</p>{% endif %}
+      {% if booking.paid_at %}<p class="small muted">Bezahlt am {{ booking.paid_at|dt('date') }}{% if booking.payment_provider == "stripe" %} über Stripe{% elif booking.payment_provider == "paypal" %} über PayPal{% elif booking.payment_provider == "demo" %} (Demo){% endif %}</p>{% endif %}
     </section>
   </div>
 
