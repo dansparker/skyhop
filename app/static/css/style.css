@@ -421,3 +421,6 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: .88
 .pay-option small { display: block; color: var(--muted); font-size: .8rem; }
 .pay-logo { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 32px; border-radius: 6px; background: #f1f5f9; font-weight: 800; font-size: .9rem; }
 .pay-logo-paypal { background: #ffc439; color: #003087; font-style: italic; }
+.kpis-3 { grid-template-columns: repeat(3, 1fr); }
+a.kpi { color: inherit; }
+a.kpi:hover { text-decoration: none; border-color: var(--blue); }

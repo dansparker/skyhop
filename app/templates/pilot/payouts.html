@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Auszahlungen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Auszahlungen</h1>
+  <p class="lead">Deine Kostenbeteiligung wird nach jedem durchgeführten Flug und einer kurzen Haltefrist automatisch an dich überwiesen.</p>
+
+  <div class="kpis kpis-3">
+    <div class="kpi"><b>{{ totals.paid|eur }}</b><span>ausgezahlt</span></div>
+    <div class="kpi {% if totals.open %}kpi-alert{% endif %}"><b>{{ totals.open|eur }}</b><span>offen</span></div>
+    <div class="kpi"><b>{{ 'Aktiv' if ready else ('–' if not methods else 'Fehlt') }}</b><span>Auszahlungsweg</span></div>
+  </div>
+
+  <section class="form-card">
+    <h2>Auszahlungsweg</h2>
+    {% if not methods %}
+      <div class="alert alert-info">Demo-Modus: Es ist kein Zahlungsanbieter konfiguriert. Auszahlungen werden simuliert und sofort als ausgezahlt verbucht.</div>
+    {% else %}
+      <form method="post">
+        {{ csrf() }}
+        <label class="field"><span>Land deines Bankkontos / Wohnsitzes</span>
+          <select name="payout_country">
+            {% for code, name in countries.items() %}<option value="{{ code }}" {% if (current_user.payout_country or 'AT') == code %}selected{% endif %}>{{ name }}</option>{% endfor %}
+          </select>
+        </label>
+        <div class="pay-options">
+          {% if 'stripe' in methods %}
+          <label class="pay-option">
+            <input type="radio" name="payout_method" value="stripe" {% if current_user.payout_method != 'paypal' %}checked{% endif %}>
+            <span class="pay-logo">🏦</span>
+            <span><b>Bankkonto (über Stripe)</b>
+              <small>
+                {% if current_user.stripe_account_id and current_user.stripe_payouts_ready %}✔ Eingerichtet – Überweisung auf dein Bankkonto
+                {% elif current_user.stripe_account_id %}Einrichtung begonnen, aber noch nicht abgeschlossen
+                {% else %}Einmalige Einrichtung bei Stripe (Identität &amp; IBAN), ca. 5 Minuten{% endif %}
+              </small></span>
+          </label>
+          {% endif %}
+          {% if 'paypal' in methods %}
+          <label class="pay-option">
+            <input type="radio" name="payout_method" value="paypal" {% if current_user.payout_method == 'paypal' or 'stripe' not in methods %}checked{% endif %} data-paypal-radio>
+            <span class="pay-logo pay-logo-paypal">PayPal</span>
+            <span><b>PayPal</b><small>Auszahlung an die E-Mail-Adresse deines PayPal-Kontos</small></span>
+          </label>
+          <label class="field" data-paypal-email><span>PayPal-E-Mail-Adresse</span>
+            <input type="email" name="paypal_payout_email" value="{{ current_user.paypal_payout_email or current_user.email }}">
+          </label>
+          {% endif %}
+        </div>
+        <div class="form-actions">
+          {% if current_user.stripe_account_id and current_user.stripe_payouts_ready %}
+            <button class="btn btn-ghost" type="submit" formaction="{{ url_for('pilot.stripe_dashboard') }}">Stripe-Konto verwalten ↗</button>
+          {% endif %}
+          <button class="btn btn-primary" type="submit">
+            {% if 'stripe' in methods and not current_user.stripe_payouts_ready %}Speichern / Stripe-Einrichtung starten{% else %}Speichern{% endif %}
+          </button>
+        </div>
+      </form>
+    {% endif %}
+  </section>
+
+  <h2>Verlauf</h2>
+  <table class="table">
+    <thead><tr><th>Flug</th><th>Betrag</th><th>Status</th><th>Fällig / ausgezahlt</th></tr></thead>
+    <tbody>
+      {% for p in payouts %}
+        <tr>
+          <td><a href="{{ url_for('flights.detail', flight_id=p.flight_id) }}">{{ p.flight.title }}</a><div class="small muted">{{ p.flight.departure_time|dt('date') }}</div></td>
+          <td>{{ p.amount|eur }}</td>
+          <td><span class="status status-{{ {'paid': 'paid', 'failed': 'cancelled', 'waiting_details': 'pending', 'processing': 'accepted', 'scheduled': 'accepted'}[p.status] }}">{{ p.status_label }}</span>
+            {% if p.status == 'failed' %}<div class="small muted">Wir prüfen das und versuchen es erneut.</div>{% endif %}</td>
+          <td>{{ (p.paid_at or p.due_at)|dt('date') }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">Noch keine Auszahlungen. Sie entstehen, sobald du einen Flug mit zahlenden Passagieren durchgeführt hast.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small muted">Die Kostenbeteiligung ist der Anteil deiner Passagiere an den direkten Flugkosten abzüglich der Skyhop-Servicegebühr. Mitflüge auf Kostenteilungsbasis dürfen keinen Gewinn erzielen.</p>
+</div>
+{% endblock %}

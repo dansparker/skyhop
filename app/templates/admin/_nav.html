@@ -4,5 +4,6 @@
   <a class="{% if request.endpoint == 'admin.users' %}active{% endif %}" href="{{ url_for('admin.users') }}">Nutzer:innen</a>
   <a class="{% if request.endpoint == 'admin.flights' %}active{% endif %}" href="{{ url_for('admin.flights') }}">Flüge</a>
   <a class="{% if request.endpoint == 'admin.payments_overview' %}active{% endif %}" href="{{ url_for('admin.payments_overview') }}">Zahlungen</a>
+  <a class="{% if request.endpoint == 'admin.payouts' %}active{% endif %}" href="{{ url_for('admin.payouts') }}">Auszahlungen</a>
   <a class="{% if request.endpoint == 'admin.newsletter' %}active{% endif %}" href="{{ url_for('admin.newsletter') }}">Newsletter</a>
 </div>

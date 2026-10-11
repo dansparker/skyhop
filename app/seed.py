@@ -2,7 +2,8 @@
 from datetime import date, datetime, timedelta
 
 from .extensions import db
-from .models import Aircraft, Airport, Booking, Conversation, Flight, FlightWish, Message, Review, User
+from .models import (Aircraft, Airport, Booking, Conversation, Flight, FlightWish, Message, Payout, Review,
+                     User)
 
 DEMO_PASSWORD = "skyhop123"
 
@@ -124,6 +125,14 @@ def seed_demo():
         db.session.add(Review(booking_id=b.id, author_id=f.pilot_id, target_id=passenger.id, rating=5,
                               comment="Pünktlich und gut gelaunt – jederzeit wieder!",
                               created_at=f.departure_time + timedelta(days=1)))
+
+    # Payouts for the past flights: one already paid out, one still in the holding period
+    db.session.flush()
+    db.session.add(Payout(pilot_id=anna.id, flight_id=past1.id, amount=sum(b.pilot_payout for b in past1.bookings),
+                          status="paid", method="demo", due_at=past1.departure_time + timedelta(days=2),
+                          paid_at=past1.departure_time + timedelta(days=2)))
+    db.session.add(Payout(pilot_id=lena.id, flight_id=past2.id, amount=sum(b.pilot_payout for b in past2.bookings),
+                          status="waiting_details", due_at=past2.departure_time + timedelta(days=2)))
 
     # Open bookings on upcoming flights
     wachau = flights[0]

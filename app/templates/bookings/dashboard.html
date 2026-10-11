@@ -59,7 +59,7 @@
     <div class="kpis">
       <div class="kpi"><b>{{ upcoming_flights|length }}</b><span>geplante Flüge</span></div>
       <div class="kpi"><b>{{ open_requests }}</b><span>offene Anfragen</span></div>
-      <div class="kpi"><b>{{ earnings|eur }}</b><span>Kostenbeteiligung erhalten</span></div>
+      <a class="kpi" href="{{ url_for('pilot.payouts') }}"><b>{{ earnings|eur }}</b><span>Kostenbeteiligung (Auszahlungen →)</span></a>
       <div class="kpi"><b>{{ current_user.rating or '–' }}</b><span>Ø Bewertung</span></div>
     </div>
     <div class="section-head">

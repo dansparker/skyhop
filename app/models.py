@@ -43,6 +43,13 @@ class User(UserMixin, db.Model):
     home_airport_id = db.Column(db.Integer, db.ForeignKey("airport.id"))
     home_airport = db.relationship("Airport")
 
+    # Payouts to pilots
+    payout_method = db.Column(db.String(20))  # None, "stripe" (Connect), "paypal" (Payouts)
+    payout_country = db.Column(db.String(2))
+    stripe_account_id = db.Column(db.String(64))
+    stripe_payouts_ready = db.Column(db.Boolean, default=False, nullable=False)
+    paypal_payout_email = db.Column(db.String(255))
+
     aircraft = db.relationship("Aircraft", backref="owner", lazy=True, cascade="all, delete-orphan")
     flights = db.relationship("Flight", backref="pilot", lazy=True, foreign_keys="Flight.pilot_id")
     bookings = db.relationship("Booking", backref="passenger", lazy=True, foreign_keys="Booking.passenger_id")
@@ -346,6 +353,38 @@ class FlightWish(db.Model):
     user = db.relationship("User")
     departure = db.relationship("Airport", foreign_keys=[departure_id])
     arrival = db.relationship("Airport", foreign_keys=[arrival_id])
+
+
+class Payout(db.Model):
+    """Transfer of the pilot's cost share for one completed flight."""
+
+    STATUS = {
+        "scheduled": "Geplant",
+        "waiting_details": "Auszahlungsdaten fehlen",
+        "processing": "In Bearbeitung",
+        "paid": "Ausgezahlt",
+        "failed": "Fehlgeschlagen",
+    }
+
+    id = db.Column(db.Integer, primary_key=True)
+    pilot_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    flight_id = db.Column(db.Integer, db.ForeignKey("flight.id"), nullable=False, unique=True)
+    amount = db.Column(db.Integer, nullable=False)  # EUR
+    status = db.Column(db.String(20), default="scheduled", nullable=False, index=True)
+    method = db.Column(db.String(20))  # stripe, paypal, demo, manual
+    external_id = db.Column(db.String(128))  # Stripe transfer id / PayPal batch id
+    error = db.Column(db.String(500))
+    attempts = db.Column(db.Integer, default=0, nullable=False)
+    due_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    paid_at = db.Column(db.DateTime)
+
+    pilot = db.relationship("User")
+    flight = db.relationship("Flight", backref=db.backref("payout", uselist=False))
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, self.status)
 
 
 class NewsletterSubscriber(db.Model):

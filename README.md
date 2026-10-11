@@ -34,6 +34,15 @@ EU-Kostenteilungsregeln.
 - Admin-Übersicht über Zahlungen und fehlgeschlagene Erstattungen
 - Ohne `STRIPE_SECRET_KEY` läuft ein Demo-Zahlungsmodus
 
+**Auszahlungen an Pilot:innen**
+- Pilot:innen wählen ihren Auszahlungsweg: **Bankkonto über Stripe Connect** (Express-Onboarding inkl.
+  Identitätsprüfung, eigenes Stripe-Dashboard) oder **PayPal Payouts** (an die PayPal-E-Mail-Adresse)
+- Nach dem Flug wird die Kostenbeteiligung (Buchungen abzüglich Servicegebühr) mit **Haltefrist** eingeplant
+- Vergessene Flüge werden automatisch abgeschlossen; `flask --app run payouts` (Cron) zahlt fällige Beträge aus
+- Fehlende Auszahlungsdaten → Erinnerung, Auszahlung startet automatisch, sobald die Daten hinterlegt sind
+- Idempotent (keine Doppelauszahlungen), Fehler mit Wiederholung, Admin-Übersicht inkl. „jetzt auszahlen“ und
+  „manuell erledigt“
+
 **E-Mail & Double-Opt-in**
 - **Konto-Bestätigung (Double-Opt-in):** nach der Registrierung kommt ein signierter Link (48 h gültig, an die
   Adresse gebunden). Bis zur Bestätigung kann man stöbern, aber nicht buchen, schreiben oder Flüge anbieten.
@@ -91,6 +100,7 @@ Ohne `.env` läuft alles im Demo-Modus: Zahlungen werden simuliert, E-Mails ersc
 
 ```bash
 pytest                     # Tests ausführen
+flask --app run payouts    # vergangene Flüge abschließen + fällige Auszahlungen ausführen (für Cron)
 flask --app run reset-db   # Datenbank leeren
 ```
 
@@ -106,6 +116,7 @@ Alle Variablen mit Erklärung stehen in [`.env.example`](.env.example). Die wich
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout + Webhook                                  |
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`, `PAYPAL_WEBHOOK_ID` | PayPal direkt (REST API v2) |
 | `PAYMENT_PROVIDERS`                        | Angebotene Anbieter + Reihenfolge, z. B. `stripe,paypal`     |
+| `PAYOUT_DELAY_HOURS`, `AUTO_COMPLETE_HOURS` | Haltefrist vor Auszahlung, automatischer Flugabschluss      |
 | `DATABASE_URL`                             | SQLAlchemy-URL, Standard: `instance/skyhop.db`               |
 | `TRUST_PROXY`                              | `1` hinter einem Reverse-Proxy (korrekte Client-IPs)         |
 
@@ -139,7 +150,19 @@ erscheint dann automatisch auf der Stripe-Bezahlseite; Erstattungen und Webhooks
 Beide Varianten lassen sich kombinieren: `PAYMENT_PROVIDERS=stripe,paypal` zeigt beide Optionen,
 `PAYMENT_PROVIDERS=paypal` nur PayPal direkt.
 
-> Auszahlungen an Pilot:innen sind noch nicht automatisiert – dafür wären **Stripe Connect** bzw. **PayPal Payouts** der nächste Schritt.
+### Auszahlungen an Pilot:innen einrichten
+
+- **Stripe Connect:** Im Stripe-Dashboard *Connect* aktivieren (Plattform-Profil ausfüllen). Pilot:innen starten
+  unter *Auszahlungen* das Express-Onboarding. Überweisungen laufen als *Transfers* aus dem Plattform-Guthaben
+  („separate charges and transfers“) – das Guthaben muss also verfügbar sein; sonst schlägt die Auszahlung fehl
+  und wird beim nächsten Lauf wiederholt. Bitte im Testmodus prüfen, ob die gewählten Länder und die
+  „recipient“-Servicevereinbarung für dein Plattform-Land unterstützt werden.
+- **PayPal Payouts:** Muss für das PayPal-Geschäftskonto freigeschaltet sein (im Developer-Dashboard unter
+  *App-Funktionen*). Der Status wird beim Cron-Lauf abgefragt.
+- **Cron:** `flask --app run payouts` stündlich ausführen (Linux: crontab, Windows: Aufgabenplanung).
+
+> Hinweis zur Kasse: Zahlungen über Stripe landen im Stripe-Guthaben, PayPal-Zahlungen im PayPal-Guthaben.
+> Wer beides anbietet, muss für ausreichend Guthaben auf dem jeweiligen Auszahlungsweg sorgen.
 
 ### E-Mail einrichten
 

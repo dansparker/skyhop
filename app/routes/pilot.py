@@ -1,8 +1,10 @@
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+import stripe
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from .. import payouts as payout_service
 from ..extensions import db
-from ..models import Aircraft, Flight, User
+from ..models import Aircraft, Flight, Payout, User
 from ..utils import find_airport, notify, parse_int, pilot_required
 
 bp = Blueprint("pilot", __name__, url_prefix="/pilot")
@@ -138,3 +140,81 @@ def aircraft_delete(aircraft_id):
         db.session.commit()
         flash("Flugzeug gelöscht.", "info")
     return redirect(url_for("pilot.aircraft_list"))
+
+
+# --- Payouts -----------------------------------------------------------------------------------------
+
+@bp.route("/auszahlungen", methods=["GET", "POST"])
+@pilot_required
+def payouts():
+    methods = payout_service.available_methods()
+    if request.method == "POST":
+        method = request.form.get("payout_method")
+        country = request.form.get("payout_country", "").upper()
+        if country in payout_service.COUNTRIES:
+            current_user.payout_country = country
+        if method == "paypal" and "paypal" in methods:
+            email = request.form.get("paypal_payout_email", "").strip().lower()
+            if "@" not in email or "." not in email.split("@")[-1]:
+                flash("Bitte gib die E-Mail-Adresse deines PayPal-Kontos an.", "danger")
+                return redirect(url_for("pilot.payouts"))
+            current_user.payout_method = "paypal"
+            current_user.paypal_payout_email = email
+            db.session.commit()
+            flash("PayPal als Auszahlungsweg gespeichert.", "success")
+            _retry_waiting(current_user)
+        elif method == "stripe" and "stripe" in methods:
+            current_user.payout_method = "stripe"
+            db.session.commit()
+            return redirect(url_for("pilot.stripe_onboarding"), code=307)
+        return redirect(url_for("pilot.payouts"))
+
+    if request.args.get("stripe") == "zurueck" and current_user.stripe_account_id:
+        try:
+            if payout_service.refresh_stripe_status(current_user):
+                flash("Dein Stripe-Konto ist eingerichtet – Auszahlungen sind aktiv. 🎉", "success")
+                _retry_waiting(current_user)
+            else:
+                flash("Die Einrichtung bei Stripe ist noch nicht abgeschlossen.", "warning")
+        except stripe.StripeError:
+            current_app.logger.exception("Stripe-Status für Nutzer %s nicht abrufbar", current_user.id)
+    items = Payout.query.filter_by(pilot_id=current_user.id).order_by(Payout.created_at.desc()).all()
+    totals = {
+        "paid": sum(p.amount for p in items if p.status == "paid"),
+        "open": sum(p.amount for p in items if p.status != "paid"),
+    }
+    return render_template("pilot/payouts.html", payouts=items, totals=totals, methods=methods,
+                           countries=payout_service.COUNTRIES, ready=payout_service.pilot_ready(current_user))
+
+
+@bp.route("/auszahlungen/stripe", methods=["GET", "POST"])
+@pilot_required
+def stripe_onboarding():
+    """POST: start onboarding (creates the Express account once). GET: Stripe's refresh_url for expired links."""
+    if "stripe" not in payout_service.available_methods():
+        abort(404)
+    if request.method == "GET" and not current_user.stripe_account_id:
+        return redirect(url_for("pilot.payouts"))
+    try:
+        return redirect(payout_service.stripe_onboarding_url(current_user), code=303)
+    except stripe.StripeError:
+        current_app.logger.exception("Stripe-Onboarding für Nutzer %s fehlgeschlagen", current_user.id)
+        flash("Stripe ist gerade nicht erreichbar. Bitte versuche es später erneut.", "danger")
+        return redirect(url_for("pilot.payouts"))
+
+
+@bp.route("/auszahlungen/stripe-dashboard", methods=["POST"])
+@pilot_required
+def stripe_dashboard():
+    if not current_user.stripe_account_id or "stripe" not in payout_service.available_methods():
+        abort(404)
+    try:
+        return redirect(payout_service.stripe_dashboard_url(current_user), code=303)
+    except stripe.StripeError:
+        flash("Das Stripe-Dashboard ist erst nach abgeschlossener Einrichtung verfügbar.", "warning")
+        return redirect(url_for("pilot.payouts"))
+
+
+def _retry_waiting(user):
+    for p in Payout.query.filter_by(pilot_id=user.id, status="waiting_details").all():
+        payout_service.execute(p)

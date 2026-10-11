@@ -46,6 +46,9 @@ def create_app(config=None):
         PAYPAL_WEBHOOK_ID=env("PAYPAL_WEBHOOK_ID", ""),
         # Optional: which configured providers to offer and in which order, e.g. "paypal,stripe"
         PAYMENT_PROVIDERS=env("PAYMENT_PROVIDERS", "stripe,paypal"),
+        # Payouts to pilots: holding period after the flight, auto-complete forgotten flights
+        PAYOUT_DELAY_HOURS=int(env("PAYOUT_DELAY_HOURS", "48")),
+        AUTO_COMPLETE_HOURS=int(env("AUTO_COMPLETE_HOURS", "24")),
     )
     if config:
         app.config.update(config)
@@ -211,6 +214,16 @@ def _register_cli(app):
 
         seed_demo()
         print("Demo-Daten angelegt.")
+
+    @app.cli.command("payouts")
+    def payouts_cmd():
+        """Auto-complete past flights and execute due payouts (run e.g. hourly via cron)."""
+        from .payouts import run_due
+
+        base = app.config.get("BASE_URL") or "http://localhost:5000"
+        with app.test_request_context(base_url=base):  # links in notifications/e-mails
+            result = run_due()
+        print(f"{result['completed_flights']} Flüge abgeschlossen, {result['processed']} Auszahlungen bearbeitet.")
 
     @app.cli.command("reset-db")
     def reset_db_cmd():

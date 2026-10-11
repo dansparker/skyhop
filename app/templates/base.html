@@ -41,6 +41,7 @@
               {% if current_user.is_pilot %}
                 <a href="{{ url_for('bookings.dashboard', tab='pilot') }}">Meine Flüge</a>
                 <a href="{{ url_for('pilot.aircraft_list') }}">Meine Flugzeuge</a>
+                <a href="{{ url_for('pilot.payouts') }}">Auszahlungen</a>
               {% endif %}
               <a href="{{ url_for('main.favorites') }}">Merkliste</a>
               <a href="{{ url_for('profile.public', user_id=current_user.id) }}">Öffentliches Profil</a>

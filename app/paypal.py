@@ -152,3 +152,33 @@ def verify_webhook(headers, event):
         return False
     result = request("POST", "/v1/notifications/verify-webhook-signature", body)
     return result.get("verification_status") == "SUCCESS"
+
+
+# --- Payouts (pilot cost shares) -----------------------------------------------------------------
+
+def create_payout(payout_id, receiver_email, amount, note):
+    """Send money to a PayPal account. Returns (batch_id, batch_status)."""
+    body = {
+        "sender_batch_header": {
+            "sender_batch_id": f"skyhop-payout-{payout_id}",  # PayPal rejects duplicates → no double payouts
+            "email_subject": "Deine Skyhop-Kostenbeteiligung",
+            "email_message": note,
+        },
+        "items": [{
+            "recipient_type": "EMAIL",
+            "receiver": receiver_email,
+            "amount": _money(amount),
+            "note": note,
+            "sender_item_id": str(payout_id),
+        }],
+    }
+    result = request("POST", "/v1/payments/payouts", body)
+    header = result.get("batch_header", {})
+    return header.get("payout_batch_id"), header.get("batch_status")
+
+
+def get_payout_batch(batch_id):
+    """Returns (batch_status, item_transaction_status)."""
+    result = request("GET", f"/v1/payments/payouts/{batch_id}")
+    items = result.get("items") or [{}]
+    return result.get("batch_header", {}).get("batch_status"), items[0].get("transaction_status")

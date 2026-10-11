@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from .. import payments
+from .. import payments, payouts
 from ..extensions import db
 from ..models import Aircraft, Booking, Favorite, Flight, FlightWish
 from ..utils import find_airport, notify, parse_datetime, parse_int, pilot_required, resolve_airports
@@ -282,14 +282,10 @@ def complete(flight_id):
     if flight.status != "published" or not flight.is_past:
         flash("Ein Flug kann erst nach dem Abflug als durchgeführt markiert werden.", "warning")
         return redirect(url_for("flights.detail", flight_id=flight.id))
-    flight.status = "completed"
-    for b in flight.bookings:
-        if b.status == "paid":
-            b.status = "completed"
-            notify(b.passenger, f"Wie war dein Flug mit {flight.pilot.first_name}? Gib jetzt eine Bewertung ab.",
-                   url_for("bookings.detail", booking_id=b.id))
-        elif b.status in ("pending", "accepted"):
-            b.status = "cancelled"
+    payout = payouts.complete_flight(flight)
     db.session.commit()
-    flash("Flug als durchgeführt markiert. Die Auszahlung wird veranlasst.", "success")
+    if payout and payout.status == "scheduled" and not payouts.pilot_ready(current_user) and payouts.available_methods():
+        flash("Hinterlege noch deine Auszahlungsdaten, damit wir dir deine Kostenbeteiligung überweisen können.",
+              "warning")
+    flash("Flug als durchgeführt markiert. Deine Kostenbeteiligung wird nach der Haltefrist ausgezahlt.", "success")
     return redirect(url_for("bookings.dashboard", tab="pilot"))

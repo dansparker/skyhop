@@ -152,3 +152,16 @@
 
   window.addEventListener("load", () => document.querySelectorAll(".map[data-routes]").forEach(initMap));
 })();
+
+// Payout settings: show PayPal e-mail field only when PayPal is selected
+(function () {
+  const field = document.querySelector("[data-paypal-email]");
+  if (!field) return;
+  const radios = document.querySelectorAll("input[name=payout_method]");
+  const sync = () => {
+    const checked = document.querySelector("input[name=payout_method]:checked");
+    field.style.display = checked && checked.value === "paypal" ? "" : "none";
+  };
+  radios.forEach((r) => r.addEventListener("change", sync));
+  sync();
+})();

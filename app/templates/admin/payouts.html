@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Auszahlungen – Admin – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <div class="section-head">
+    <p class="muted">
+      Ausgezahlt {{ sums.paid|eur }} · geplant {{ sums.scheduled|eur }} · in Bearbeitung {{ sums.processing|eur }} ·
+      Daten fehlen {{ sums.waiting_details|eur }} · fehlgeschlagen {{ sums.failed|eur }}
+      · Anbieter: {{ methods|join(', ') if methods else 'Demo' }}
+    </p>
+    <form method="post" action="{{ url_for('admin.payouts_run') }}">{{ csrf() }}<button class="btn btn-primary btn-sm">Fällige jetzt verarbeiten</button></form>
+  </div>
+  <table class="table">
+    <thead><tr><th>#</th><th>Pilot:in</th><th>Flug</th><th>Betrag</th><th>Status</th><th>Weg</th><th>Fällig</th><th>Referenz / Fehler</th><th></th></tr></thead>
+    <tbody>
+      {% for p in payouts %}
+        <tr>
+          <td>{{ p.id }}</td>
+          <td><a href="{{ url_for('profile.public', user_id=p.pilot_id) }}">{{ p.pilot.name }}</a><div class="small muted">{{ p.pilot.payout_method or '–' }}</div></td>
+          <td><a href="{{ url_for('flights.detail', flight_id=p.flight_id) }}">{{ p.flight.title }}</a></td>
+          <td>{{ p.amount|eur }}</td>
+          <td>{{ p.status_label }}</td>
+          <td>{{ p.method or '–' }}</td>
+          <td>{{ p.due_at|dt }}</td>
+          <td class="small">{{ p.external_id or '' }}{% if p.error %}<div class="muted">{{ p.error }}</div>{% endif %}</td>
+          <td class="actions">
+            {% if p.status not in ('paid', 'processing') %}
+              <form method="post" action="{{ url_for('admin.payout_action', payout_id=p.id, action='ausfuehren') }}">{{ csrf() }}<button class="btn btn-sm btn-success">Jetzt auszahlen</button></form>
+              <form method="post" action="{{ url_for('admin.payout_action', payout_id=p.id, action='manuell') }}" data-confirm="Als manuell überwiesen markieren?">{{ csrf() }}<button class="btn btn-sm btn-ghost">Manuell erledigt</button></form>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9" class="muted">Noch keine Auszahlungen.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="small muted">Tipp: <code>flask --app run payouts</code> stündlich per Cron/Task-Scheduler ausführen – schließt vergessene Flüge automatisch ab und zahlt fällige Beträge aus.</p>
+</div>
+{% endblock %}
