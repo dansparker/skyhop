@@ -5,7 +5,7 @@ from flask_login import current_user, login_required
 
 from ..extensions import db
 from ..models import FlightWish
-from ..utils import find_airport, parse_int
+from ..utils import confirmed_required, find_airport, parse_int
 
 bp = Blueprint("wishes", __name__, url_prefix="/flugwuensche")
 
@@ -28,7 +28,7 @@ def index():
 
 
 @bp.route("/neu", methods=["GET", "POST"])
-@login_required
+@confirmed_required
 def create():
     if request.method == "POST":
         f = request.form

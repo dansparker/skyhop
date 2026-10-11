@@ -18,6 +18,7 @@
       <label class="field"><span>Wiederholen</span><input type="password" name="password2" minlength="8" required autocomplete="new-password"></label>
     </div>
     <label class="check"><input type="checkbox" name="as_pilot" {% if form.get('as_pilot') %}checked{% endif %}> Ich bin Pilot:in und möchte Flüge anbieten</label>
+    <label class="check"><input type="checkbox" name="newsletter" {% if form.get('newsletter') %}checked{% endif %}> Newsletter mit neuen Flügen erhalten (optional, Bestätigung per E-Mail)</label>
     <label class="check"><input type="checkbox" name="terms" required> Ich akzeptiere die Nutzungsbedingungen und Datenschutzhinweise</label>
     <button class="btn btn-primary btn-block btn-lg" type="submit">Registrieren</button>
     <p class="center small">Schon dabei? <a href="{{ url_for('auth.login') }}">Anmelden</a></p>

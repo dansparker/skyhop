@@ -14,6 +14,8 @@
     <div class="kpi"><b>{{ stats.volume|eur }}</b><span>Buchungsvolumen</span></div>
     <div class="kpi"><b>{{ stats.fees|eur }}</b><span>Servicegebühren</span></div>
     <div class="kpi"><b>{{ stats.reviews }}</b><span>Bewertungen</span></div>
+    <div class="kpi"><b>{{ stats.subscribers }}</b><span>Newsletter-Abonnent:innen</span></div>
+    <div class="kpi {% if stats.open_refunds %}kpi-alert{% endif %}"><b>{{ stats.open_refunds }}</b><span>offene Erstattungen</span></div>
   </div>
   <h2>Letzte Buchungen</h2>
   <table class="table">

@@ -60,6 +60,13 @@
     </div>
   </header>
 
+  {% if current_user.is_authenticated and not current_user.email_confirmed and request.endpoint != 'auth.unconfirmed' %}
+    <div class="confirm-banner">
+      <div class="container">📬 Bitte bestätige deine E-Mail-Adresse <b>{{ current_user.email }}</b>, um Flüge buchen zu können.
+        <a href="{{ url_for('auth.unconfirmed') }}">Link erneut senden</a></div>
+    </div>
+  {% endif %}
+
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
       <div class="container flashes">
@@ -77,6 +84,13 @@
       <div>
         <a class="brand brand-light" href="{{ url_for('main.index') }}"><span>sky<b>hop</b></span></a>
         <p class="muted-light">Die Mitflugbörse für Kleinflugzeuge. Teile die Kosten, nicht den Himmel.</p>
+        <form class="newsletter-form" method="post" action="{{ url_for('newsletter.subscribe') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <label for="nl-email" class="nl-label">Newsletter: neue Flüge &amp; Rundflug-Tipps</label>
+          <div class="nl-row"><input id="nl-email" type="email" name="email" required placeholder="deine@email.at"><button class="btn btn-accent btn-sm" type="submit">Anmelden</button></div>
+          <label class="nl-consent"><input type="checkbox" name="consent" required> Ich möchte den Newsletter erhalten und kann mich jederzeit abmelden. Du bekommst eine Bestätigungs-E-Mail (Double-Opt-in).</label>
+        </form>
       </div>
       <div>
         <h4>Passagiere</h4>

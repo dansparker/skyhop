@@ -1,19 +1,33 @@
+import time
+from datetime import datetime
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from ..extensions import db
+from ..mailer import make_token, read_token, send_email
 from ..models import User
 from ..utils import notify
 
 bp = Blueprint("auth", __name__)
+
+CONFIRM_MAX_AGE = 60 * 60 * 48   # 48 h
+RESET_MAX_AGE = 60 * 60          # 1 h
+RESEND_COOLDOWN = 60             # seconds
 
 
 def _safe_next(target):
     if target and urlparse(target).netloc == "" and target.startswith("/") and not target.startswith("//"):
         return target
     return None
+
+
+def send_confirmation_email(user):
+    token = make_token("email-confirm", {"id": user.id, "email": user.email})
+    send_email(user.email, "Bitte bestätige deine E-Mail-Adresse", "confirm_email",
+               action_url=url_for("auth.confirm_email", token=token), action_label="E-Mail-Adresse bestätigen",
+               user=user)
 
 
 @bp.route("/registrieren", methods=["GET", "POST"])
@@ -48,14 +62,57 @@ def register():
         db.session.add(user)
         db.session.flush()
         notify(user, "Willkommen bei Skyhop! Vervollständige dein Profil, damit Pilot:innen dich kennenlernen.",
-               url_for("profile.edit"))
+               url_for("profile.edit"), email=False)
         db.session.commit()
+        send_confirmation_email(user)
+        session["confirm_sent_at"] = time.time()
+        if form.get("newsletter"):
+            from .newsletter import request_subscription
+
+            request_subscription(user.email, user=user)
         login_user(user)
-        flash(f"Willkommen an Bord, {user.first_name}!", "success")
+        flash(f"Willkommen an Bord, {user.first_name}! Wir haben dir eine E-Mail geschickt – "
+              "bitte bestätige deine Adresse, um Flüge buchen zu können.", "success")
         if form.get("as_pilot"):
             return redirect(url_for("pilot.become"))
         return redirect(_safe_next(request.args.get("next")) or url_for("main.index"))
     return render_template("auth/register.html", form=form)
+
+
+@bp.route("/email-bestaetigen/<token>")
+def confirm_email(token):
+    data = read_token("email-confirm", token, CONFIRM_MAX_AGE)
+    user = db.session.get(User, data["id"]) if data else None
+    if not user or user.email != data.get("email"):
+        flash("Der Bestätigungslink ist ungültig oder abgelaufen. Fordere einfach einen neuen an.", "danger")
+        return redirect(url_for("auth.unconfirmed") if current_user.is_authenticated else url_for("auth.login"))
+    if not user.email_confirmed:
+        user.email_confirmed = True
+        user.email_confirmed_at = datetime.utcnow()
+        db.session.commit()
+        flash("Danke! Deine E-Mail-Adresse ist bestätigt. 🎉", "success")
+    else:
+        flash("Deine E-Mail-Adresse war bereits bestätigt.", "info")
+    if not current_user.is_authenticated:
+        return redirect(url_for("auth.login"))
+    return redirect(url_for("bookings.dashboard"))
+
+
+@bp.route("/email-bestaetigen", methods=["GET", "POST"])
+@login_required
+def unconfirmed():
+    if current_user.email_confirmed:
+        return redirect(url_for("bookings.dashboard"))
+    if request.method == "POST":
+        last = session.get("confirm_sent_at", 0)
+        if time.time() - last < RESEND_COOLDOWN:
+            flash("Bitte warte eine Minute, bevor du erneut eine E-Mail anforderst.", "warning")
+        else:
+            send_confirmation_email(current_user)
+            session["confirm_sent_at"] = time.time()
+            flash(f"Wir haben eine neue Bestätigungs-E-Mail an {current_user.email} gesendet.", "success")
+        return redirect(url_for("auth.unconfirmed"))
+    return render_template("auth/unconfirmed.html")
 
 
 @bp.route("/anmelden", methods=["GET", "POST"])
@@ -97,3 +154,50 @@ def change_password():
             flash("Passwort geändert.", "success")
             return redirect(url_for("profile.edit"))
     return render_template("auth/password.html")
+
+
+def _reset_fingerprint(user):
+    # Token becomes invalid as soon as the password changes (single use)
+    return user.password_hash[-16:]
+
+
+@bp.route("/passwort-vergessen", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = make_token("password-reset", {"id": user.id, "fp": _reset_fingerprint(user)})
+            send_email(user.email, "Passwort zurücksetzen", "reset_password",
+                       action_url=url_for("auth.reset_password", token=token), action_label="Neues Passwort festlegen",
+                       user=user)
+        # Same answer either way – does not reveal whether an account exists
+        flash("Falls ein Konto mit dieser Adresse existiert, haben wir dir einen Link zum Zurücksetzen geschickt.",
+              "info")
+        return redirect(url_for("auth.login"))
+    return render_template("auth/forgot_password.html")
+
+
+@bp.route("/passwort-zuruecksetzen/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    data = read_token("password-reset", token, RESET_MAX_AGE)
+    user = db.session.get(User, data["id"]) if data else None
+    if not user or data.get("fp") != _reset_fingerprint(user):
+        flash("Der Link ist ungültig oder abgelaufen. Bitte fordere einen neuen an.", "danger")
+        return redirect(url_for("auth.forgot_password"))
+    if request.method == "POST":
+        pw = request.form.get("new", "")
+        if len(pw) < 8:
+            flash("Das Passwort muss mindestens 8 Zeichen lang sein.", "danger")
+        elif pw != request.form.get("new2"):
+            flash("Die Passwörter stimmen nicht überein.", "danger")
+        else:
+            user.set_password(pw)
+            # Clicking a link from the inbox also proves ownership of the address
+            if not user.email_confirmed:
+                user.email_confirmed = True
+                user.email_confirmed_at = datetime.utcnow()
+            db.session.commit()
+            flash("Dein Passwort wurde geändert. Du kannst dich jetzt anmelden.", "success")
+            return redirect(url_for("auth.login"))
+    return render_template("auth/reset_password.html")

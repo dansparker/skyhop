@@ -4,8 +4,9 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 from flask_login import current_user, login_required
 
 from ..extensions import db
-from ..models import Flight, User
+from ..models import Flight, NewsletterSubscriber, User
 from ..utils import find_airport
+from .newsletter import request_subscription
 
 bp = Blueprint("profile", __name__)
 
@@ -31,12 +32,21 @@ def edit():
         last = f.get("last_name", "").strip()
         if not first or not last:
             flash("Vor- und Nachname dürfen nicht leer sein.", "danger")
-            return render_template("profile/edit.html", form=f)
+            return render_template("profile/edit.html", form=f, newsletter=None)
         current_user.first_name = first
         current_user.last_name = last
         current_user.city = f.get("city", "").strip() or None
         current_user.phone = f.get("phone", "").strip() or None
         current_user.bio = f.get("bio", "").strip() or None
+        current_user.email_notifications = bool(f.get("email_notifications"))
+        sub = NewsletterSubscriber.query.filter_by(email=current_user.email).first()
+        wants_newsletter = bool(f.get("newsletter"))
+        if wants_newsletter and (not sub or sub.status == "unsubscribed"):
+            request_subscription(current_user.email, user=current_user)
+            flash("Bitte bestätige deine Newsletter-Anmeldung über den Link in der E-Mail.", "info")
+        elif not wants_newsletter and sub and sub.status in ("pending", "confirmed"):
+            sub.status = "unsubscribed"
+            sub.unsubscribed_at = datetime.utcnow()
         if current_user.pilot_status != "none":
             home = find_airport(f.get("home_airport"))
             current_user.home_airport_id = home.id if home else None
@@ -47,5 +57,7 @@ def edit():
         "first_name": current_user.first_name, "last_name": current_user.last_name,
         "city": current_user.city or "", "phone": current_user.phone or "", "bio": current_user.bio or "",
         "home_airport": current_user.home_airport.label if current_user.home_airport else "",
+        "email_notifications": current_user.email_notifications,
     }
-    return render_template("profile/edit.html", form=form)
+    sub = NewsletterSubscriber.query.filter_by(email=current_user.email).first()
+    return render_template("profile/edit.html", form=form, newsletter=sub)

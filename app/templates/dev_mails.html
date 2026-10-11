@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Dev-Postfach – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>📮 Dev-Postfach</h1>
+  <div class="alert alert-info">Kein <code>MAIL_SERVER</code> konfiguriert – E-Mails werden nicht verschickt, sondern hier angezeigt (nur im Debug-Modus, max. 50, gehen beim Neustart verloren).</div>
+  <div class="list">
+    {% for m in mails %}
+      <div class="list-item">
+        <div class="grow">
+          <b>{{ m.subject }}</b><div class="small muted">an {{ m.to }}</div>
+          {% if m.action_url %}<div class="small"><a href="{{ m.action_url }}">{{ m.action_url|truncate(90) }}</a></div>{% endif %}
+        </div>
+        <a class="btn btn-ghost btn-sm" href="{{ url_for('main.dev_mails', index=loop.index0) }}" target="_blank">Ansehen</a>
+      </div>
+    {% else %}
+      <div class="empty">Noch keine E-Mails.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

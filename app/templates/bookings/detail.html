@@ -23,7 +23,8 @@
   </ol>
 
   {% if booking.status == 'declined' %}<div class="alert alert-warning">Diese Anfrage wurde abgelehnt. <a href="{{ url_for('flights.search', **{'from': flight.departure.city}) }}">Andere Flüge ab {{ flight.departure.city }} ansehen →</a></div>{% endif %}
-  {% if booking.status == 'cancelled' %}<div class="alert alert-info">Diese Buchung wurde storniert.{% if booking.paid_at %} Der bezahlte Betrag wird erstattet.{% endif %}</div>{% endif %}
+  {% if booking.status == 'cancelled' %}<div class="alert alert-info">Diese Buchung wurde storniert.
+    {% if booking.paid_at %}{% if booking.refund_status == 'refunded' %} {{ booking.total_price|eur }} wurden am {{ booking.refunded_at|dt('date') }} erstattet.{% else %} Die Erstattung über {{ booking.total_price|eur }} ist in Bearbeitung.{% endif %}{% endif %}</div>{% endif %}
 
   <div class="grid-2">
     <section class="box">
@@ -45,7 +46,7 @@
       <div class="calc-row small muted"><span>davon Skyhop-Servicegebühr</span><span>{{ booking.service_fee|eur }}</span></div>
       {% if is_pilot %}<div class="calc-row total"><span>Kostenbeteiligung für dich</span><b>{{ booking.pilot_payout|eur }}</b></div>
       {% else %}<div class="calc-row total"><span>Gesamt</span><b>{{ booking.total_price|eur }}</b></div>{% endif %}
-      {% if booking.paid_at %}<p class="small muted">Bezahlt am {{ booking.paid_at|dt('date') }}</p>{% endif %}
+      {% if booking.paid_at %}<p class="small muted">Bezahlt am {{ booking.paid_at|dt('date') }}{% if booking.payment_provider == 'stripe' %} über Stripe{% elif booking.payment_provider == 'demo' %} (Demo){% endif %}</p>{% endif %}
     </section>
   </div>
 

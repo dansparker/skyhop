@@ -15,7 +15,7 @@ def _user(email, first, last, city, bio=None, **kw):
     u = User.query.filter_by(email=email).first()
     if u:
         return u
-    u = User(email=email, first_name=first, last_name=last, city=city, bio=bio, **kw)
+    u = User(email=email, first_name=first, last_name=last, city=city, bio=bio, email_confirmed=True, **kw)
     u.set_password(DEMO_PASSWORD)
     db.session.add(u)
     db.session.flush()

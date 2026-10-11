@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}E-Mail bestätigen – Skyhop{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card center">
+    <div class="step-icon">📬</div>
+    <h1>Bestätige deine E-Mail-Adresse</h1>
+    <p>Wir haben einen Bestätigungslink an <b>{{ current_user.email }}</b> gesendet. Klicke darauf, um Flüge buchen, Nachrichten senden und Flugwünsche aufgeben zu können.</p>
+    <p class="small muted">Nichts angekommen? Schau im Spam-Ordner nach oder fordere einen neuen Link an.</p>
+    <form method="post">{{ csrf() }}<button class="btn btn-primary btn-block" type="submit">Bestätigungs-E-Mail erneut senden</button></form>
+    <p class="small muted" style="margin-top:16px">Falsche Adresse? Registriere dich einfach neu oder kontaktiere den Support.</p>
+  </div>
+</div>
+{% endblock %}

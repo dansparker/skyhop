@@ -1,11 +1,13 @@
 from datetime import datetime
 
+import stripe
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from .. import payments
 from ..extensions import db
 from ..models import Booking, Flight, Review
-from ..utils import get_or_create_conversation, notify, parse_int
+from ..utils import confirmed_required, get_or_create_conversation, notify, parse_int
 
 bp = Blueprint("bookings", __name__)
 
@@ -40,7 +42,7 @@ def dashboard():
 
 
 @bp.route("/fluege/<int:flight_id>/buchen", methods=["POST"])
-@login_required
+@confirmed_required
 def request_booking(flight_id):
     flight = db.session.get(Flight, flight_id) or abort(404)
     if flight.pilot_id == current_user.id:
@@ -142,15 +144,50 @@ def checkout(booking_id):
         if not request.form.get("confirm"):
             flash("Bitte bestätige die Buchungsbedingungen.", "danger")
             return redirect(url_for("bookings.checkout", booking_id=booking.id))
-        booking.status = "paid"
-        booking.paid_at = datetime.utcnow()
-        notify(booking.flight.pilot,
-               f"{current_user.short_name} hat {booking.seats} Platz/Plätze für „{booking.flight.title}“ bezahlt.",
-               url_for("bookings.detail", booking_id=booking.id))
-        db.session.commit()
+        if booking.flight.is_past:
+            flash("Dieser Flug hat bereits stattgefunden.", "warning")
+            return redirect(url_for("bookings.detail", booking_id=booking.id))
+        if payments.stripe_enabled():
+            try:
+                return redirect(payments.create_checkout_session(booking), code=303)
+            except stripe.StripeError:
+                current_app.logger.exception("Stripe-Checkout für Buchung %s fehlgeschlagen", booking.id)
+                flash("Der Zahlungsdienst ist gerade nicht erreichbar. Bitte versuche es später erneut.", "danger")
+                return redirect(url_for("bookings.checkout", booking_id=booking.id))
+        payments.mark_paid(booking, "demo")
         flash("Zahlung erfolgreich – du fliegst mit! ✈️", "success")
         return redirect(url_for("bookings.detail", booking_id=booking.id))
-    return render_template("bookings/checkout.html", booking=booking, flight=booking.flight)
+    return render_template("bookings/checkout.html", booking=booking, flight=booking.flight,
+                           stripe_enabled=payments.stripe_enabled())
+
+
+@bp.route("/buchungen/<int:booking_id>/zahlung-erfolgreich")
+@login_required
+def payment_success(booking_id):
+    booking = _get_booking_for_member(booking_id)
+    session_id = request.args.get("session_id", "")
+    if booking.passenger_id != current_user.id or not session_id or session_id != booking.stripe_session_id:
+        abort(403)
+    try:
+        payments.finalize_checkout_session(session_id)
+    except stripe.StripeError:
+        current_app.logger.exception("Stripe-Session %s konnte nicht geprüft werden", session_id)
+    db.session.refresh(booking)
+    if booking.status == "paid":
+        flash("Zahlung erfolgreich – du fliegst mit! ✈️", "success")
+    else:
+        flash("Deine Zahlung wird noch verarbeitet. Du bekommst eine Bestätigung, sobald sie eingegangen ist.", "info")
+    return redirect(url_for("bookings.detail", booking_id=booking.id))
+
+
+@bp.route("/stripe/webhook", methods=["POST"])
+def stripe_webhook():
+    try:
+        event_type = payments.handle_webhook(request.get_data(), request.headers.get("Stripe-Signature"))
+    except (ValueError, stripe.SignatureVerificationError) as e:
+        current_app.logger.warning("Ungültiger Stripe-Webhook: %s", e)
+        return {"error": "invalid"}, 400
+    return {"received": event_type}, 200
 
 
 @bp.route("/buchungen/<int:booking_id>/stornieren", methods=["POST"])
@@ -164,12 +201,16 @@ def cancel(booking_id):
         return redirect(url_for("bookings.detail", booking_id=booking.id))
     was_paid = booking.status == "paid"
     booking.status = "cancelled"
+    if was_paid:
+        payments.refund(booking)
     notify(booking.flight.pilot, f"{current_user.short_name} hat die Buchung für „{booking.flight.title}“ storniert.",
            url_for("flights.detail", flight_id=booking.flight_id))
     db.session.commit()
     msg = "Buchung storniert."
-    if was_paid:
-        msg += f" Die Erstattung über {booking.total_price} € wird veranlasst."
+    if was_paid and booking.refund_status == "refunded":
+        msg += f" {booking.total_price} € werden auf dein Zahlungsmittel zurückerstattet."
+    elif was_paid:
+        msg += " Die Erstattung wird von unserem Team manuell bearbeitet."
     flash(msg, "info")
     return redirect(url_for("bookings.dashboard"))
 

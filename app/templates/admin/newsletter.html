@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Newsletter – Admin – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  <div class="section-head">
+    <p class="muted">{{ counts.confirmed }} bestätigt · {{ counts.pending }} ausstehend · {{ counts.unsubscribed }} abgemeldet</p>
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('admin.newsletter_csv') }}">⬇ CSV-Export (bestätigt, inkl. Opt-in-Nachweis)</a>
+  </div>
+  <table class="table">
+    <thead><tr><th>E-Mail</th><th>Status</th><th>Angefragt</th><th>Bestätigt</th><th>Bestätigungs-IP</th></tr></thead>
+    <tbody>
+      {% for s in subs %}
+        <tr><td>{{ s.email }}</td><td><span class="status status-{{ {'confirmed': 'paid', 'pending': 'pending', 'unsubscribed': 'cancelled'}[s.status] }}">{{ s.status_label }}</span></td>
+          <td>{{ s.requested_at|dt }}</td><td>{{ s.confirmed_at|dt if s.confirmed_at else '–' }}</td><td>{{ s.confirm_ip or '–' }}</td></tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">Noch keine Anmeldungen.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

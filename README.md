@@ -24,6 +24,26 @@ EU-Kostenteilungsregeln.
 - Anfragen annehmen/ablehnen, Flug bearbeiten, absagen (mit automatischer Erstattung) oder als durchgeführt markieren
 - Dashboard mit offenen Anfragen, Kostenbeteiligung und Ø-Bewertung
 
+**Zahlungen (Stripe)**
+- Bezahlung über **Stripe Checkout** (Karte, Apple/Google Pay, SEPA, … – Skyhop sieht keine Zahlungsdaten)
+- Bestätigung über Success-Redirect **und** signierten Webhook (idempotent)
+- Automatische **Erstattung** bei Storno durch Passagier oder Absage durch Pilot:in; Zahlungen für bereits
+  stornierte Buchungen werden sofort zurücküberwiesen
+- Admin-Übersicht über Zahlungen und fehlgeschlagene Erstattungen
+- Ohne `STRIPE_SECRET_KEY` läuft ein Demo-Zahlungsmodus
+
+**E-Mail & Double-Opt-in**
+- **Konto-Bestätigung (Double-Opt-in):** nach der Registrierung kommt ein signierter Link (48 h gültig, an die
+  Adresse gebunden). Bis zur Bestätigung kann man stöbern, aber nicht buchen, schreiben oder Flüge anbieten.
+  Erneut senden mit Rate-Limit.
+- **Passwort vergessen:** einmal verwendbarer Link (1 h), keine Preisgabe, ob ein Konto existiert
+- **Newsletter mit DSGVO-konformem Double-Opt-in:** Anmeldung im Footer, bei der Registrierung oder im Profil;
+  Bestätigung per Button-Klick (schützt vor Link-Scannern), Nachweis mit Zeitstempel + IP von Anfrage und
+  Bestätigung, Abmeldelink + `List-Unsubscribe`-Header, CSV-Export im Admin-Bereich
+- **Benachrichtigungen per E-Mail** (Anfragen, Bestätigungen, Absagen, neue Nachrichten – bei Chats nur die
+  erste ungelesene), im Profil abschaltbar
+- HTML- + Text-Mails über SMTP (jeder Anbieter); ohne SMTP landen Mails im **Dev-Postfach** unter `/dev/mails`
+
 **Plattform**
 - Registrierung/Login, Profile mit öffentlicher Seite, gegenseitige Bewertungen (1–5 Sterne)
 - Nachrichten (Chat pro Flug/Person) mit Ungelesen-Zählern und Lesebestätigung
@@ -34,7 +54,7 @@ EU-Kostenteilungsregeln.
 
 ## Tech-Stack
 
-Python 3.11+ · Flask · Flask-SQLAlchemy (SQLite) · Flask-Login · Jinja2 · Vanilla JS · Leaflet
+Python 3.11+ · Flask · Flask-SQLAlchemy (SQLite) · Flask-Login · Jinja2 · Stripe · SMTP · Vanilla JS · Leaflet
 
 ## Schnellstart
 
@@ -44,9 +64,13 @@ cd skyhop
 python -m venv .venv
 # Windows: .venv\Scripts\activate   ·   macOS/Linux: source .venv/bin/activate
 pip install -r requirements-dev.txt
+cp .env.example .env       # optional: SMTP- und Stripe-Zugangsdaten eintragen
 flask --app run seed       # Demo-Daten anlegen
 python run.py              # → http://localhost:5000
 ```
+
+Ohne `.env` läuft alles im Demo-Modus: Zahlungen werden simuliert, E-Mails erscheinen unter
+<http://localhost:5000/dev/mails>.
 
 ### Demo-Konten (Passwort jeweils `skyhop123`)
 
@@ -68,14 +92,42 @@ pytest                     # Tests ausführen
 flask --app run reset-db   # Datenbank leeren
 ```
 
-### Konfiguration (Umgebungsvariablen)
+### Konfiguration (Umgebungsvariablen / `.env`)
 
-| Variable            | Bedeutung                                   |
-|---------------------|---------------------------------------------|
-| `SKYHOP_SECRET_KEY` | Secret Key für Sessions (in Produktion setzen!) |
-| `DATABASE_URL`      | SQLAlchemy-URL, Standard: `instance/skyhop.db` |
-| `PORT`              | Port für `run.py` (Standard 5000)            |
-| `FLASK_DEBUG`       | `0` deaktiviert den Debug-Modus              |
+Alle Variablen mit Erklärung stehen in [`.env.example`](.env.example). Die wichtigsten:
+
+| Variable                                   | Bedeutung                                                    |
+|--------------------------------------------|--------------------------------------------------------------|
+| `SKYHOP_SECRET_KEY`                        | Secret Key für Sessions und Token (in Produktion setzen!)    |
+| `BASE_URL`                                 | Öffentliche URL – für Links in E-Mails und Stripe-Redirects  |
+| `MAIL_SERVER`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_USE_TLS`, `MAIL_DEFAULT_SENDER` | SMTP-Versand |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Stripe Checkout + Webhook                                  |
+| `DATABASE_URL`                             | SQLAlchemy-URL, Standard: `instance/skyhop.db`               |
+| `TRUST_PROXY`                              | `1` hinter einem Reverse-Proxy (korrekte Client-IPs)         |
+
+### Stripe einrichten (Testmodus)
+
+1. Kostenloses Konto auf <https://dashboard.stripe.com> anlegen, Testmodus aktiv lassen.
+2. Unter *Entwickler → API-Schlüssel* den **Secret Key** (`sk_test_…`) als `STRIPE_SECRET_KEY` eintragen.
+3. Webhook lokal weiterleiten mit der [Stripe CLI](https://docs.stripe.com/stripe-cli):
+   `stripe listen --forward-to localhost:5000/stripe/webhook` – das ausgegebene `whsec_…` als
+   `STRIPE_WEBHOOK_SECRET` eintragen. In Produktion den Endpunkt `<BASE_URL>/stripe/webhook` im Dashboard
+   anlegen (Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.refunded`).
+4. Testkarte `4242 4242 4242 4242`, beliebiges Datum in der Zukunft, beliebige Prüfziffer.
+
+> Auszahlungen an Pilot:innen sind noch nicht automatisiert – dafür wäre **Stripe Connect** der nächste Schritt.
+
+### E-Mail einrichten
+
+Jeder SMTP-Anbieter funktioniert (z. B. Brevo, Mailjet, Postmark, Amazon SES oder das eigene Postfach).
+Für die Zustellbarkeit SPF, DKIM und DMARC für die Absenderdomain einrichten. Lokal kann man mit
+[Mailpit](https://mailpit.axllent.org) testen (`MAIL_SERVER=localhost`, `MAIL_PORT=1025`, `MAIL_USE_TLS=0`).
+
+### Datenbank-Updates
+
+Neue Spalten werden beim Start automatisch zu einer bestehenden SQLite-Datenbank hinzugefügt. Bereits
+vorhandene Konten gelten dabei als bestätigt. Für Produktion mit PostgreSQL empfiehlt sich später
+Flask-Migrate/Alembic.
 
 ## Projektstruktur
 

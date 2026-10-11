@@ -17,10 +17,14 @@
     <form method="post" class="box">
       {{ csrf() }}
       <h2>Zahlung</h2>
-      <div class="alert alert-info">Demo-Modus: Skyhop ist ein Open-Source-Nachbau. Es werden keine Zahlungsdaten abgefragt und kein Geld bewegt.</div>
+      {% if stripe_enabled %}
+        <p>Du wirst zur sicheren Bezahlseite unseres Zahlungspartners <b>Stripe</b> weitergeleitet (Karte, Apple Pay, Google Pay, SEPA u. a.). Skyhop sieht deine Zahlungsdaten nie.</p>
+      {% else %}
+        <div class="alert alert-info">Demo-Modus: Es ist kein Zahlungsanbieter konfiguriert. Es werden keine Zahlungsdaten abgefragt und kein Geld bewegt.</div>
+      {% endif %}
       <p class="small">Der Betrag wird treuhänderisch gehalten und erst nach dem Flug an die Pilot:in ausgezahlt. Sagt die Pilot:in ab (z. B. wegen Wetter), erhältst du den vollen Betrag zurück.</p>
       <label class="check"><input type="checkbox" name="confirm" required> Ich akzeptiere die Buchungs- und Stornobedingungen und bestätige, dass es sich um einen nicht-kommerziellen Flug auf Kostenteilungsbasis handelt.</label>
-      <button class="btn btn-accent btn-block btn-lg" type="submit">{{ booking.total_price|eur }} zahlungspflichtig buchen</button>
+      <button class="btn btn-accent btn-block btn-lg" type="submit">{{ booking.total_price|eur }} zahlungspflichtig buchen{% if stripe_enabled %} →{% endif %}</button>
     </form>
   </div>
 </div>

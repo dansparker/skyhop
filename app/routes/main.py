@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from ..extensions import db
@@ -83,3 +83,19 @@ def toggle_favorite(flight_id):
         db.session.add(Favorite(user_id=current_user.id, flight_id=flight.id))
     db.session.commit()
     return redirect(request.form.get("next") or url_for("flights.detail", flight_id=flight.id))
+
+
+@bp.route("/dev/mails")
+@bp.route("/dev/mails/<int:index>")
+def dev_mails(index=None):
+    """Local inbox for development: shows mails that were not sent because MAIL_SERVER is not configured."""
+    if current_app.config.get("MAIL_SERVER") or not (current_app.debug or current_app.testing):
+        abort(404)
+    from ..mailer import outbox
+
+    mails = list(outbox)
+    if index is not None:
+        if index >= len(mails):
+            abort(404)
+        return mails[index]["html"]
+    return render_template("dev_mails.html", mails=mails)

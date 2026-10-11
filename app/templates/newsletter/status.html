@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Newsletter – Skyhop{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-card center">
+    {% if state == 'confirmed' %}
+      <div class="step-icon">🎉</div>
+      <h1>Danke für deine Bestätigung!</h1>
+      <p>Du bist jetzt beim Skyhop-Newsletter angemeldet.</p>
+    {% else %}
+      <div class="step-icon">👋</div>
+      <h1>Du bist abgemeldet</h1>
+      <p>Du erhältst keinen Newsletter mehr an <b>{{ sub.email }}</b>.</p>
+    {% endif %}
+    <a class="btn btn-primary" href="{{ url_for('flights.search') }}">Flüge entdecken</a>
+  </div>
+</div>
+{% endblock %}

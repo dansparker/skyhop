@@ -1,0 +1,7 @@
+Hallo {{ user.first_name }},
+
+willkommen bei Skyhop! Bitte bestätige deine E-Mail-Adresse, damit du Flüge buchen, Nachrichten senden und Flugwünsche aufgeben kannst.
+
+Der Link ist 48 Stunden gültig.
+
+Du hast dich nicht bei Skyhop registriert? Dann ignoriere diese E-Mail einfach – ohne Bestätigung wird die Adresse nicht verwendet.

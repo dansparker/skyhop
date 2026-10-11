@@ -8,8 +8,35 @@ from .extensions import db
 from .models import Airport, Conversation, Notification
 
 
-def notify(user, text, link=None):
+def notify(user, text, link=None, email=True):
+    """In-app notification, mirrored by e-mail if the user confirmed their address and wants mails."""
     db.session.add(Notification(user_id=user.id, text=text, link=link))
+    if email and user.email_confirmed and user.email_notifications:
+        from .mailer import send_email
+
+        subject = text if len(text) <= 70 else text[:67].rstrip() + "…"
+        send_email(user.email, subject, "notification", action_url=link, action_label="Auf Skyhop ansehen",
+                   user=user, text=text)
+
+
+def confirmed_required(view):
+    """Double opt-in: actions that contact other people require a confirmed e-mail address."""
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+        if not current_user.email_confirmed:
+            flash("Bitte bestätige zuerst deine E-Mail-Adresse – wir haben dir einen Link geschickt.", "warning")
+            return redirect(url_for("auth.unconfirmed"))
+        return view(*args, **kwargs)
+    return wrapped
+
+
+def client_ip():
+    from flask import request
+
+    # Behind a reverse proxy set TRUST_PROXY=1 (ProxyFix), so remote_addr is the real client IP
+    return (request.remote_addr or "")[:64]
 
 
 def pilot_required(view):
@@ -17,6 +44,9 @@ def pilot_required(view):
     def wrapped(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("auth.login"))
+        if not current_user.email_confirmed:
+            flash("Bitte bestätige zuerst deine E-Mail-Adresse.", "warning")
+            return redirect(url_for("auth.unconfirmed"))
         if not current_user.is_pilot:
             flash("Diese Funktion steht nur verifizierten Pilot:innen zur Verfügung.", "warning")
             return redirect(url_for("pilot.become"))

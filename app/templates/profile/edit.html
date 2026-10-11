@@ -19,6 +19,11 @@
       <label class="field"><span>Heimatflugplatz</span><input name="home_airport" list="airports" value="{{ form.get('home_airport', '') }}"></label>
       {{ airport_datalist() }}
     {% endif %}
+    <h2>E-Mails</h2>
+    <label class="check"><input type="checkbox" name="email_notifications" {% if form.get('email_notifications') %}checked{% endif %}> Benachrichtigungen per E-Mail (Buchungsanfragen, Bestätigungen, Nachrichten)</label>
+    <label class="check"><input type="checkbox" name="newsletter" {% if newsletter and newsletter.status in ('pending', 'confirmed') %}checked{% endif %}> Newsletter
+      {% if newsletter and newsletter.status == 'pending' %}<span class="status status-pending">Bestätigung ausstehend</span>{% elif newsletter and newsletter.status == 'confirmed' %}<span class="status status-paid">aktiv</span>{% endif %}</label>
+    {% if not current_user.email_confirmed %}<div class="alert alert-warning">Deine E-Mail-Adresse ist noch nicht bestätigt. <a href="{{ url_for('auth.unconfirmed') }}">Link erneut senden</a></div>{% endif %}
     <label class="field"><span>Über mich</span><textarea name="bio" rows="5" placeholder="Erzähl etwas über dich – Pilot:innen und Passagiere freuen sich!">{{ form.get('bio', '') }}</textarea></label>
     <div class="form-actions">
       <a class="btn btn-ghost" href="{{ url_for('auth.change_password') }}">Passwort ändern</a>

@@ -1,6 +1,13 @@
 import os
 
-from app import create_app
+try:  # optional: load settings from a local .env file
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
+from app import create_app  # noqa: E402
 
 app = create_app()
 

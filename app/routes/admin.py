@@ -1,9 +1,11 @@
+import csv
+import io
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
 
 from ..extensions import db
-from ..models import Booking, Flight, Review, User
+from ..models import Booking, Flight, NewsletterSubscriber, Review, User
 from ..utils import admin_required, notify
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -22,6 +24,9 @@ def index():
         "volume": sum(b.total_price for b in paid),
         "fees": sum(b.service_fee for b in paid),
         "reviews": Review.query.count(),
+        "subscribers": NewsletterSubscriber.query.filter_by(status="confirmed").count(),
+        "open_refunds": sum(1 for b in Booking.query.filter_by(status="cancelled")
+                            if b.paid_at and b.refund_status != "refunded"),
     }
     latest_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(10).all()
     return render_template("admin/index.html", stats=stats, latest_bookings=latest_bookings)
@@ -71,3 +76,44 @@ def users():
 def flights():
     items = Flight.query.order_by(Flight.departure_time.desc()).all()
     return render_template("admin/flights.html", flights=items)
+
+
+@bp.route("/newsletter")
+@admin_required
+def newsletter():
+    subs = NewsletterSubscriber.query.order_by(NewsletterSubscriber.requested_at.desc()).all()
+    counts = {k: sum(1 for s in subs if s.status == k) for k in NewsletterSubscriber.STATUS}
+    return render_template("admin/newsletter.html", subs=subs, counts=counts)
+
+
+@bp.route("/newsletter.csv")
+@admin_required
+def newsletter_csv():
+    """Export of confirmed subscribers incl. double opt-in proof (timestamps + IPs)."""
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(["email", "angefragt_am", "anfrage_ip", "bestaetigt_am", "bestaetigungs_ip"])
+    for s in NewsletterSubscriber.query.filter_by(status="confirmed").order_by(NewsletterSubscriber.email):
+        w.writerow([s.email, s.requested_at.isoformat() if s.requested_at else "", s.request_ip or "",
+                    s.confirmed_at.isoformat() if s.confirmed_at else "", s.confirm_ip or ""])
+    return Response(buf.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=skyhop-newsletter.csv"})
+
+
+@bp.route("/zahlungen")
+@admin_required
+def payments_overview():
+    paid = Booking.query.filter(Booking.paid_at.isnot(None)).order_by(Booking.paid_at.desc()).all()
+    open_refunds = [b for b in paid if b.status == "cancelled" and b.refund_status in (None, "failed", "manual")]
+    return render_template("admin/payments.html", paid=paid, open_refunds=open_refunds)
+
+
+@bp.route("/zahlungen/<int:booking_id>/erstattet", methods=["POST"])
+@admin_required
+def mark_refunded(booking_id):
+    booking = db.session.get(Booking, booking_id) or abort(404)
+    booking.refund_status = "refunded"
+    booking.refunded_at = datetime.utcnow()
+    db.session.commit()
+    flash(f"Buchung #{booking.id} als erstattet markiert.", "success")
+    return redirect(url_for("admin.payments_overview"))

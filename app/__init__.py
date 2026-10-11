@@ -11,20 +11,41 @@ WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 MONTHS = ["Jän", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"]
 
 
+def _env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in ("1", "true", "yes", "on")
+
+
 def create_app(config=None):
     app = Flask(__name__, instance_relative_config=True)
     os.makedirs(app.instance_path, exist_ok=True)
+    env = os.environ.get
     app.config.update(
-        SECRET_KEY=os.environ.get("SKYHOP_SECRET_KEY", "dev-only-change-me"),
-        SQLALCHEMY_DATABASE_URI=os.environ.get(
-            "DATABASE_URL", "sqlite:///" + os.path.join(app.instance_path, "skyhop.db")
-        ),
+        SECRET_KEY=env("SKYHOP_SECRET_KEY", "dev-only-change-me"),
+        SQLALCHEMY_DATABASE_URI=env("DATABASE_URL", "sqlite:///" + os.path.join(app.instance_path, "skyhop.db")),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SERVICE_FEE_RATE=0.10,
         CSRF_ENABLED=True,
+        BASE_URL=env("BASE_URL", ""),
+        TRUST_PROXY=_env_bool("TRUST_PROXY"),
+        # E-mail (SMTP). Without MAIL_SERVER mails land in the dev inbox at /dev/mails.
+        MAIL_SERVER=env("MAIL_SERVER", ""),
+        MAIL_PORT=int(env("MAIL_PORT", "587")),
+        MAIL_USERNAME=env("MAIL_USERNAME", ""),
+        MAIL_PASSWORD=env("MAIL_PASSWORD", ""),
+        MAIL_USE_TLS=_env_bool("MAIL_USE_TLS", True),
+        MAIL_USE_SSL=_env_bool("MAIL_USE_SSL", False),
+        MAIL_DEFAULT_SENDER=env("MAIL_DEFAULT_SENDER", "noreply@skyhop.local"),
+        MAIL_REPLY_TO=env("MAIL_REPLY_TO", ""),
+        # Payments (Stripe Checkout). Without STRIPE_SECRET_KEY bookings use demo payments.
+        STRIPE_SECRET_KEY=env("STRIPE_SECRET_KEY", ""),
+        STRIPE_WEBHOOK_SECRET=env("STRIPE_WEBHOOK_SECRET", ""),
     )
     if config:
         app.config.update(config)
+    if app.config["TRUST_PROXY"]:
+        from werkzeug.middleware.proxy_fix import ProxyFix
+
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -35,9 +56,10 @@ def create_app(config=None):
     def load_user(user_id):
         return db.session.get(User, int(user_id))
 
-    from .routes import admin, auth, bookings, flights, main, messages, pilot, profile, wishes
+    from .routes import admin, auth, bookings, flights, main, messages, newsletter, pilot, profile, wishes
 
-    for bp in (main.bp, auth.bp, flights.bp, bookings.bp, messages.bp, pilot.bp, profile.bp, wishes.bp, admin.bp):
+    for bp in (main.bp, auth.bp, flights.bp, bookings.bp, messages.bp, pilot.bp, profile.bp, wishes.bp,
+               newsletter.bp, admin.bp):
         app.register_blueprint(bp)
 
     _register_csrf(app)
@@ -46,11 +68,44 @@ def create_app(config=None):
 
     with app.app_context():
         db.create_all()
+        _add_missing_columns()
         from .airports import seed_airports
 
         seed_airports(db)
 
     return app
+
+
+def _add_missing_columns():
+    """Tiny auto-migration: add columns introduced after a database was created (SQLite dev databases)."""
+    from sqlalchemy import inspect, text
+
+    insp = inspect(db.engine)
+    added = set()
+    for table in db.metadata.sorted_tables:
+        if not insp.has_table(table.name):
+            continue
+        existing = {c["name"] for c in insp.get_columns(table.name)}
+        for col in table.columns:
+            if col.name in existing:
+                continue
+            ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(db.engine.dialect)}'
+            default = col.default.arg if col.default is not None and col.default.is_scalar else None
+            if isinstance(default, bool):
+                ddl += f" NOT NULL DEFAULT {int(default)}"
+            elif isinstance(default, (int, float)):
+                ddl += f" DEFAULT {default}"
+            db.session.execute(text(ddl))
+            added.add(f"{table.name}.{col.name}")
+    if "user.email_confirmed" in added:
+        # Accounts that existed before double opt-in was introduced count as confirmed
+        db.session.execute(text('UPDATE "user" SET email_confirmed = 1'))
+    if added:
+        db.session.commit()
+
+
+# Endpoints that receive POSTs from third parties and authenticate themselves (signature)
+CSRF_EXEMPT = {"bookings.stripe_webhook"}
 
 
 def _register_csrf(app):
@@ -63,7 +118,7 @@ def _register_csrf(app):
 
     @app.before_request
     def check_csrf():
-        if not app.config.get("CSRF_ENABLED"):
+        if not app.config.get("CSRF_ENABLED") or request.endpoint in CSRF_EXEMPT:
             return
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             token = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")

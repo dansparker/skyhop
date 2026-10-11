@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from .. import payments
 from ..extensions import db
 from ..models import Aircraft, Booking, Favorite, Flight, FlightWish
 from ..utils import find_airport, notify, parse_datetime, parse_int, pilot_required, resolve_airports
@@ -258,10 +259,11 @@ def cancel(flight_id):
     reason = request.form.get("reason", "").strip()
     for b in flight.bookings:
         if b.status in ("pending", "accepted", "paid"):
-            refunded = b.status == "paid"
+            was_paid = b.status == "paid"
             b.status = "cancelled"
             text = f"Der Flug „{flight.title}“ am {flight.departure_time:%d.%m.%Y} wurde abgesagt."
-            if refunded:
+            if was_paid:
+                payments.refund(b)
                 text += f" Du erhältst {b.total_price} € vollständig zurück."
             if reason:
                 text += f" Grund: {reason[:120]}"

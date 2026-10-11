@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_macros.html" import booking_status, csrf %}
+{% block title %}Zahlungen – Admin – Skyhop{% endblock %}
+{% block content %}
+<div class="container page">
+  <h1>Admin</h1>
+  {% include "admin/_nav.html" %}
+  {% if open_refunds %}
+    <h2>Offene Erstattungen ({{ open_refunds|length }})</h2>
+    <p class="muted small">Automatische Erstattung fehlgeschlagen oder nicht möglich – bitte im Stripe-Dashboard prüfen und danach als erstattet markieren.</p>
+    {% for b in open_refunds %}
+      <div class="box request-row">
+        <div class="grow"><a href="{{ url_for('bookings.detail', booking_id=b.id) }}"><b>#{{ b.id }}</b></a> · {{ b.passenger.name }} · {{ b.total_price|eur }}
+          <div class="small muted">{{ b.flight.title }} · Status: {{ b.refund_status or 'offen' }}{% if b.stripe_payment_intent %} · {{ b.stripe_payment_intent }}{% endif %}</div></div>
+        <form method="post" action="{{ url_for('admin.mark_refunded', booking_id=b.id) }}">{{ csrf() }}<button class="btn btn-success btn-sm">Als erstattet markieren</button></form>
+      </div>
+    {% endfor %}
+  {% endif %}
+  <h2>Zahlungen</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>Bezahlt am</th><th>Passagier</th><th>Flug</th><th>Betrag</th><th>Anbieter</th><th>Status</th><th>Erstattung</th></tr></thead>
+    <tbody>
+      {% for b in paid %}
+        <tr><td><a href="{{ url_for('bookings.detail', booking_id=b.id) }}">{{ b.id }}</a></td><td>{{ b.paid_at|dt('date') }}</td><td>{{ b.passenger.name }}</td><td>{{ b.flight.title }}</td>
+          <td>{{ b.total_price|eur }}</td><td>{{ b.payment_provider or 'demo' }}</td><td>{{ booking_status(b) }}</td><td>{{ b.refund_status or '–' }}</td></tr>
+      {% else %}
+        <tr><td colspan="8" class="muted">Noch keine Zahlungen.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

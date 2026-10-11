@@ -2,16 +2,24 @@ import pytest
 
 from app import create_app
 from app.extensions import db as _db
+from app.mailer import outbox
 from app.models import Aircraft, Airport, User
 
 
 @pytest.fixture
 def app():
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", "CSRF_ENABLED": False})
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", "CSRF_ENABLED": False,
+                      "STRIPE_SECRET_KEY": "", "STRIPE_WEBHOOK_SECRET": "", "MAIL_SERVER": ""})
     with app.app_context():
         yield app
         _db.session.remove()
         _db.drop_all()
+
+
+@pytest.fixture(autouse=True)
+def clear_outbox():
+    outbox.clear()
+    yield outbox
 
 
 @pytest.fixture
@@ -19,8 +27,9 @@ def client(app):
     return app.test_client()
 
 
-def make_user(email, pilot=False, admin=False):
-    u = User(email=email, first_name=email.split("@")[0].title(), last_name="Test", is_admin=admin)
+def make_user(email, pilot=False, admin=False, confirmed=True):
+    u = User(email=email, first_name=email.split("@")[0].title(), last_name="Test", is_admin=admin,
+             email_confirmed=confirmed)
     u.set_password("password123")
     if pilot:
         u.pilot_status = "verified"
@@ -41,6 +50,13 @@ def login(client, email):
 
 def logout(client):
     return client.post("/abmelden", follow_redirects=True)
+
+
+def path_of(url):
+    """'http://localhost/foo?x=1' → '/foo?x=1' (for following links from e-mails in the test client)."""
+    if "://" in url:
+        url = "/" + url.split("://", 1)[1].split("/", 1)[1]
+    return url
 
 
 @pytest.fixture

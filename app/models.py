@@ -30,6 +30,11 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # E-mail double opt-in & preferences
+    email_confirmed = db.Column(db.Boolean, default=False, nullable=False)
+    email_confirmed_at = db.Column(db.DateTime)
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)
+
     # Pilot data
     pilot_status = db.Column(db.String(20), default="none")  # none, pending, verified, rejected
     license_type = db.Column(db.String(20))
@@ -240,6 +245,13 @@ class Booking(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     paid_at = db.Column(db.DateTime)
 
+    # Payment provider data
+    payment_provider = db.Column(db.String(20))  # "stripe" or "demo"
+    stripe_session_id = db.Column(db.String(255), index=True)
+    stripe_payment_intent = db.Column(db.String(255))
+    refund_status = db.Column(db.String(20))  # None, "refunded", "failed", "manual"
+    refunded_at = db.Column(db.DateTime)
+
     @property
     def status_label(self):
         return self.STATUS.get(self.status, self.status)
@@ -332,6 +344,26 @@ class FlightWish(db.Model):
     user = db.relationship("User")
     departure = db.relationship("Airport", foreign_keys=[departure_id])
     arrival = db.relationship("Airport", foreign_keys=[arrival_id])
+
+
+class NewsletterSubscriber(db.Model):
+    """Newsletter consent with double opt-in. Request/confirm timestamps and IPs serve as proof of consent."""
+
+    STATUS = {"pending": "Bestätigung ausstehend", "confirmed": "Bestätigt", "unsubscribed": "Abgemeldet"}
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    status = db.Column(db.String(20), default="pending", nullable=False, index=True)
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow)
+    request_ip = db.Column(db.String(64))
+    confirmed_at = db.Column(db.DateTime)
+    confirm_ip = db.Column(db.String(64))
+    unsubscribed_at = db.Column(db.DateTime)
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, self.status)
 
 
 class Notification(db.Model):

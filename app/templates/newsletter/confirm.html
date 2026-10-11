@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Newsletter bestätigen – Skyhop{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <form method="post" class="auth-card center">
+    {{ csrf() }}
+    <div class="step-icon">✉️</div>
+    <h1>Newsletter-Anmeldung bestätigen</h1>
+    {% if sub.status == 'confirmed' %}
+      <p>Die Adresse <b>{{ sub.email }}</b> ist bereits angemeldet.</p>
+    {% else %}
+      <p>Möchtest du den Skyhop-Newsletter an <b>{{ sub.email }}</b> erhalten? Du kannst dich jederzeit wieder abmelden.</p>
+      <button class="btn btn-accent btn-block btn-lg" type="submit">Ja, Newsletter erhalten</button>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
