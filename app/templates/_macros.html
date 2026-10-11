@@ -1,5 +1,6 @@
 {% macro avatar(user, size='') -%}
-<span class="avatar {% if size %}avatar-{{ size }}{% endif %}" style="background: {{ user.avatar_color }}">{{ user.initials }}</span>
+{% if user.avatar_url %}<img class="avatar {% if size %}avatar-{{ size }}{% endif %}" src="{{ user.avatar_url }}" alt="{{ user.short_name }}" loading="lazy">
+{%- else %}<span class="avatar {% if size %}avatar-{{ size }}{% endif %}" style="background: {{ user.avatar_color }}">{{ user.initials }}</span>{% endif %}
 {%- endmacro %}
 
 {% macro rating(user) -%}
@@ -11,6 +12,7 @@
 {% macro flight_card(f, favorites=None) -%}
 <article class="flight-card">
   <a class="flight-card-link" href="{{ url_for('flights.detail', flight_id=f.id) }}" aria-label="{{ f.title }}"></a>
+  {% if f.aircraft.photo_url %}<div class="flight-card-photo" style="background-image: url('{{ f.aircraft.photo_url }}')"></div>{% endif %}
   <div class="flight-card-top type-{{ f.flight_type }}">
     <span class="chip">{{ f.type_label }}</span>
     <div class="flight-card-date">

@@ -7,8 +7,9 @@ from app.models import Aircraft, Airport, User
 
 
 @pytest.fixture
-def app():
+def app(tmp_path):
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:", "CSRF_ENABLED": False,
+                      "UPLOAD_FOLDER": str(tmp_path / "uploads"),
                       "STRIPE_SECRET_KEY": "", "STRIPE_WEBHOOK_SECRET": "", "MAIL_SERVER": "",
                       "PAYPAL_CLIENT_ID": "", "PAYPAL_CLIENT_SECRET": "", "PAYMENT_PROVIDERS": "stripe,paypal"})
     with app.app_context():
@@ -63,3 +64,34 @@ def path_of(url):
 @pytest.fixture
 def airports(app):
     return {a.icao: a for a in Airport.query.all()}
+
+
+def png_bytes(size=(40, 30), exif_gps=False):
+    """A real PNG/JPEG image for upload tests (JPEG with EXIF when exif_gps=True)."""
+    import io
+
+    from PIL import Image
+
+    img = Image.new("RGB", size, (30, 90, 200))
+    buf = io.BytesIO()
+    if exif_gps:
+        exif = Image.Exif()
+        exif[0x010F] = "SecretCam"           # Make
+        exif[0x8825] = {2: (48.0, 12.0, 0.0)}  # GPSInfo
+        img.save(buf, "JPEG", exif=exif)
+    else:
+        img.save(buf, "PNG")
+    return buf.getvalue()
+
+
+PDF_BYTES = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+
+
+def upload_pilot_documents(client):
+    import io
+
+    client.post("/pilot/dokumente", data={"kind": "license", "document": (io.BytesIO(PDF_BYTES), "lizenz.pdf")},
+                content_type="multipart/form-data")
+    client.post("/pilot/dokumente", data={"kind": "medical", "health_consent": "on",
+                                          "document": (io.BytesIO(png_bytes()), "medical.png")},
+                content_type="multipart/form-data")

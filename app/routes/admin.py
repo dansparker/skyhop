@@ -48,11 +48,17 @@ def pilot_action(user_id, action):
     user = db.session.get(User, user_id) or abort(404)
     if action == "approve":
         user.pilot_status = "verified"
+        for d in user.documents:
+            if d.status == "pending":
+                d.status, d.reviewed_at = "approved", datetime.utcnow()
         notify(user, "Deine Pilotenlizenz wurde verifiziert! Du kannst jetzt Flüge anbieten.",
                url_for("flights.create"))
         flash(f"{user.name} ist jetzt verifiziert.", "success")
     elif action == "reject":
         user.pilot_status = "rejected"
+        for d in user.documents:
+            if d.status == "pending":
+                d.status, d.reviewed_at = "rejected", datetime.utcnow()
         notify(user, "Deine Pilotenverifizierung konnte nicht bestätigt werden. Bitte prüfe deine Angaben.",
                url_for("pilot.become"))
         flash(f"Verifizierung von {user.name} abgelehnt.", "info")

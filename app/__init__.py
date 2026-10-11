@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime
 
 from flask import Flask, abort, render_template, request, session
+from markupsafe import Markup
 from flask_login import current_user
 
 from .extensions import db, login_manager
@@ -49,6 +50,29 @@ def create_app(config=None):
         # Payouts to pilots: holding period after the flight, auto-complete forgotten flights
         PAYOUT_DELAY_HOURS=int(env("PAYOUT_DELAY_HOURS", "48")),
         AUTO_COMPLETE_HOURS=int(env("AUTO_COMPLETE_HOURS", "24")),
+        # Uploads (instance/uploads by default; documents are never publicly served)
+        UPLOAD_FOLDER=env("UPLOAD_FOLDER", ""),
+        MAX_UPLOAD_BYTES=int(env("MAX_UPLOAD_MB", "10")) * 1_000_000,
+        MAX_CONTENT_LENGTH=(int(env("MAX_UPLOAD_MB", "10")) + 1) * 1_000_000,
+        # Operator details for imprint / privacy policy / terms (§ 5 ECG, § 25 MedienG, Art. 13 DSGVO)
+        LEGAL_NAME=env("LEGAL_NAME", ""),
+        LEGAL_FORM=env("LEGAL_FORM", ""),
+        LEGAL_REPRESENTATIVE=env("LEGAL_REPRESENTATIVE", ""),
+        LEGAL_ADDRESS=env("LEGAL_ADDRESS", ""),
+        LEGAL_EMAIL=env("LEGAL_EMAIL", ""),
+        LEGAL_PHONE=env("LEGAL_PHONE", ""),
+        LEGAL_VAT_ID=env("LEGAL_VAT_ID", ""),
+        LEGAL_REGISTER=env("LEGAL_REGISTER", ""),
+        LEGAL_REGISTER_COURT=env("LEGAL_REGISTER_COURT", ""),
+        LEGAL_AUTHORITY=env("LEGAL_AUTHORITY", ""),
+        LEGAL_TRADE=env("LEGAL_TRADE", ""),
+        LEGAL_CHAMBER=env("LEGAL_CHAMBER", ""),
+        LEGAL_PRIVACY_EMAIL=env("LEGAL_PRIVACY_EMAIL", ""),
+        LEGAL_DPO=env("LEGAL_DPO", ""),
+        LEGAL_HOSTING=env("LEGAL_HOSTING", ""),
+        LEGAL_MAIL_PROVIDER=env("LEGAL_MAIL_PROVIDER", ""),
+        TERMS_VERSION=env("TERMS_VERSION", "2026-10"),
+        DOCUMENT_RETENTION_DAYS=int(env("DOCUMENT_RETENTION_DAYS", "30")),
     )
     if config:
         app.config.update(config)
@@ -64,12 +88,13 @@ def create_app(config=None):
 
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(User, int(user_id))
+        user = db.session.get(User, int(user_id))
+        return None if user is None or user.is_deleted else user
 
-    from .routes import admin, auth, bookings, flights, main, messages, newsletter, pilot, profile, wishes
+    from .routes import admin, auth, bookings, flights, main, messages, newsletter, pilot, profile, uploads, wishes
 
     for bp in (main.bp, auth.bp, flights.bp, bookings.bp, messages.bp, pilot.bp, profile.bp, wishes.bp,
-               newsletter.bp, admin.bp):
+               newsletter.bp, uploads.bp, admin.bp):
         app.register_blueprint(bp)
 
     _register_csrf(app)
@@ -201,6 +226,19 @@ def _register_template_helpers(app):
     def not_found(e):
         return render_template("pages/error.html", code=404, message="Diese Seite gibt es leider nicht."), 404
 
+    @app.template_global()
+    def legal(key, label=None):
+        """Operator detail from config; a visible placeholder if it has not been configured yet."""
+        value = app.config.get(f"LEGAL_{key.upper()}", "")
+        if value:
+            return value
+        return Markup('<mark class="todo">[') + (label or key) + Markup(' ergänzen]</mark>')
+
+    @app.errorhandler(413)
+    def too_large(e):
+        mb = app.config["MAX_UPLOAD_BYTES"] // 1_000_000
+        return render_template("pages/error.html", code=413, message=f"Die Datei ist zu groß (max. {mb} MB)."), 413
+
     @app.errorhandler(400)
     def bad_request(e):
         return render_template("pages/error.html", code=400, message=e.description), 400
@@ -224,6 +262,19 @@ def _register_cli(app):
         with app.test_request_context(base_url=base):  # links in notifications/e-mails
             result = run_due()
         print(f"{result['completed_flights']} Flüge abgeschlossen, {result['processed']} Auszahlungen bearbeitet.")
+
+    @app.cli.command("cron")
+    def cron_cmd():
+        """All periodic jobs: payouts + deletion of reviewed pilot documents (run hourly)."""
+        from .account import cleanup_documents
+        from .payouts import run_due
+
+        base = app.config.get("BASE_URL") or "http://localhost:5000"
+        with app.test_request_context(base_url=base):
+            result = run_due()
+            removed = cleanup_documents()
+        print(f"{result['completed_flights']} Flüge abgeschlossen, {result['processed']} Auszahlungen bearbeitet, "
+              f"{removed} geprüfte Dokumente gelöscht.")
 
     @app.cli.command("reset-db")
     def reset_db_cmd():

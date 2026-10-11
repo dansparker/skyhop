@@ -24,5 +24,20 @@
       <button class="btn btn-primary" type="submit">Speichern</button>
     </div>
   </form>
+  {% if aircraft %}
+  <section class="form-card upload-card">
+    <h2>Foto</h2>
+    {% if aircraft.photo_url %}<img class="aircraft-photo-lg" src="{{ aircraft.photo_url }}" alt="{{ aircraft.label }}">{% endif %}
+    <form method="post" action="{{ url_for('uploads.aircraft_photo', aircraft_id=aircraft.id) }}" enctype="multipart/form-data" class="upload-row">
+      {{ csrf() }}
+      <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+      <button class="btn btn-primary btn-sm" type="submit">Hochladen</button>
+    </form>
+    {% if aircraft.photo_url %}<form method="post" action="{{ url_for('uploads.aircraft_photo', aircraft_id=aircraft.id) }}">{{ csrf() }}<input type="hidden" name="remove" value="1"><button class="btn btn-ghost btn-sm">Foto entfernen</button></form>{% endif %}
+    <p class="small muted">JPG, PNG oder WebP, max. {{ config.MAX_UPLOAD_BYTES // 1000000 }} MB. Das Foto erscheint auf deinen Flugangeboten. Ortsangaben und andere Metadaten werden automatisch entfernt.</p>
+  </section>
+  {% else %}
+  <p class="small muted">Ein Foto kannst du nach dem Speichern hinzufügen.</p>
+  {% endif %}
 </div>
 {% endblock %}

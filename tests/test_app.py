@@ -4,7 +4,7 @@ from app.extensions import db
 from app.models import Booking, Flight, Message, Notification, Review, User
 from app.seed import seed_demo
 
-from .conftest import login, logout, make_user
+from .conftest import login, logout, make_user, upload_pilot_documents
 
 
 def _create_flight(client, **overrides):
@@ -58,9 +58,15 @@ def test_pilot_verification_flow(client, app):
     # Not yet a pilot → redirected
     r = client.get("/fluege/neu")
     assert r.status_code == 302
-    client.post("/pilot/werden", data={"license_type": "PPL", "license_number": "AT.999",
-                                       "flight_hours": "120", "home_airport": "LOWL", "medical": "on"})
+    form = {"license_type": "PPL", "license_number": "AT.999", "flight_hours": "120", "home_airport": "LOWL",
+            "medical": "on"}
+    # Without uploaded proofs the application is refused
+    client.post("/pilot/werden", data=form)
     max_ = User.query.filter_by(email="max@x.at").one()
+    assert max_.pilot_status == "none"
+    upload_pilot_documents(client)
+    client.post("/pilot/werden", data=form)
+    db.session.refresh(max_)
     assert max_.pilot_status == "pending"
     logout(client)
     login(client, "admin@x.at")

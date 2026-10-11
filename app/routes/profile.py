@@ -1,10 +1,13 @@
+import json
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
-from flask_login import current_user, login_required
+from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required, logout_user
+
+from .. import account
 
 from ..extensions import db
-from ..models import Flight, NewsletterSubscriber, User
+from ..models import Flight, NewsletterSubscriber, Payout, User
 from ..utils import find_airport
 from .newsletter import request_subscription
 
@@ -14,6 +17,8 @@ bp = Blueprint("profile", __name__)
 @bp.route("/profil/<int:user_id>")
 def public(user_id):
     user = db.session.get(User, user_id) or abort(404)
+    if user.is_deleted:
+        abort(404)
     upcoming = (
         Flight.query.filter(Flight.pilot_id == user.id, Flight.status == "published",
                             Flight.departure_time > datetime.now())
@@ -61,3 +66,34 @@ def edit():
     }
     sub = NewsletterSubscriber.query.filter_by(email=current_user.email).first()
     return render_template("profile/edit.html", form=form, newsletter=sub)
+
+
+@bp.route("/profil/daten-export")
+@login_required
+def data_export():
+    """GDPR Art. 15/20: download all personal data as JSON."""
+    data = account.export_data(current_user)
+    body = json.dumps(data, ensure_ascii=False, indent=2)
+    return Response(body, mimetype="application/json",
+                    headers={"Content-Disposition": f"attachment; filename=skyhop-daten-{current_user.id}.json",
+                             "Cache-Control": "private, no-store"})
+
+
+@bp.route("/profil/loeschen", methods=["GET", "POST"])
+@login_required
+def delete():
+    """GDPR Art. 17: delete (anonymise) the account after password confirmation."""
+    open_payouts = Payout.query.filter(Payout.pilot_id == current_user.id, Payout.status != "paid").count()
+    if request.method == "POST":
+        if not current_user.check_password(request.form.get("password", "")):
+            flash("Das Passwort ist falsch.", "danger")
+            return redirect(url_for("profile.delete"))
+        if request.form.get("confirm") != "LÖSCHEN":
+            flash("Bitte tippe LÖSCHEN zur Bestätigung ein.", "danger")
+            return redirect(url_for("profile.delete"))
+        user = current_user._get_current_object()
+        logout_user()
+        account.delete_account(user)
+        flash("Dein Konto wurde gelöscht. Schade, dass du gehst – guten Flug! ✈️", "info")
+        return redirect(url_for("main.index"))
+    return render_template("profile/delete.html", open_payouts=open_payouts)

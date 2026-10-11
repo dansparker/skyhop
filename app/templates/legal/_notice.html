@@ -1,0 +1,7 @@
+{% if current_user.is_authenticated and current_user.is_admin %}
+  <div class="alert alert-warning">
+    <b>Hinweis für Admins:</b> Dieser Text ist eine sorgfältig erstellte <b>Vorlage</b>, ersetzt aber keine Rechtsberatung.
+    Bitte vor dem Livegang von einer Rechtsanwältin / einem Rechtsanwalt prüfen lassen. Markierte Felder
+    (<mark class="todo">[… ergänzen]</mark>) werden über die <code>LEGAL_*</code>-Variablen in der <code>.env</code> befüllt.
+  </div>
+{% endif %}

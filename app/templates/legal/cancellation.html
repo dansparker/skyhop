@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Stornobedingungen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose legal">
+  {% include "legal/_notice.html" %}
+  <h1>Stornobedingungen</h1>
+  <p class="lead">Kurz gesagt: Bis zum Abflug kannst du kostenlos stornieren. Sagt die Pilot:in ab – zum Beispiel wegen Wetter –, bekommst du immer dein ganzes Geld zurück.</p>
+
+  <table class="table legal-table">
+    <thead><tr><th>Situation</th><th>Erstattung</th></tr></thead>
+    <tbody>
+      <tr><td>Du stornierst eine <b>Anfrage</b>, die noch nicht bestätigt oder noch nicht bezahlt ist</td><td>Keine Kosten</td></tr>
+      <tr><td>Du stornierst eine <b>bezahlte Buchung</b> vor dem Abflug</td><td><b>100 %</b> inkl. Servicegebühr</td></tr>
+      <tr><td>Die <b>Pilot:in sagt den Flug ab</b> (Wetter, Technik, Krankheit oder sonstige Gründe)</td><td><b>100 %</b> inkl. Servicegebühr</td></tr>
+      <tr><td>Die Pilot:in <b>lehnt deine Anfrage ab</b></td><td>Keine Kosten (es wurde noch nicht bezahlt)</td></tr>
+      <tr><td>Der Flug wird <b>aus Sicherheitsgründen abgebrochen</b>, bevor er begonnen hat</td><td><b>100 %</b></td></tr>
+      <tr><td><b>Nichterscheinen</b> (No-Show), erhebliche Verspätung oder Ausschluss nach § 5 Abs. 2 der AGB</td><td>Keine Erstattung</td></tr>
+      <tr><td>Ein bereits <b>durchgeführter Flug</b></td><td>Keine Erstattung; bei Problemen kontaktiere bitte den Support</td></tr>
+    </tbody>
+  </table>
+
+  <h2>So stornierst du</h2>
+  <p>Öffne im <a href="{{ url_for('bookings.dashboard') }}">Dashboard</a> deine Buchung und klicke auf „Buchung stornieren“. Die Pilot:in wird automatisch informiert.</p>
+
+  <h2>Wie und wann wird erstattet?</h2>
+  <ul>
+    <li>Die Erstattung erfolgt automatisch auf das Zahlungsmittel, mit dem du bezahlt hast (Karte, PayPal, SEPA usw.).</li>
+    <li>Bei Kartenzahlungen dauert die Gutschrift je nach Bank meist <b>5–10 Werktage</b>, bei PayPal in der Regel wenige Tage.</li>
+    <li>Den Status der Erstattung siehst du in der Buchungsübersicht.</li>
+  </ul>
+
+  <h2>Absagen durch Pilot:innen</h2>
+  <p>Kleinflugzeuge fliegen nach Sichtflugregeln. Eine Absage wegen Wetters ist kein Mangel, sondern eine Sicherheitsentscheidung. Pilot:innen sollen Flüge so früh wie möglich absagen und können einen Ersatztermin als neuen Flug anbieten. Häufige Absagen ohne nachvollziehbaren Grund können zur Sperre des Pilotenkontos führen.</p>
+
+  <h2>Kosten für die Pilot:in</h2>
+  <p>Bei Stornierung durch Passagiere vor dem Abflug fällt für die Pilot:in keine Kostenbeteiligung an. Ausgezahlt wird nur für tatsächlich durchgeführte Flüge.</p>
+
+  <p class="muted small">Ergänzend gelten unsere <a href="{{ url_for('main.terms') }}">AGB</a>.</p>
+</div>
+{% endblock %}

@@ -47,7 +47,7 @@
       <section class="box">
         <h2>Flugzeug</h2>
         <div class="aircraft-row">
-          <div class="aircraft-icon">🛩</div>
+          {% if flight.aircraft.photo_url %}<img class="aircraft-photo" src="{{ flight.aircraft.photo_url }}" alt="{{ flight.aircraft.label }}">{% else %}<div class="aircraft-icon">🛩</div>{% endif %}
           <div>
             <b>{{ flight.aircraft.manufacturer }} {{ flight.aircraft.model }}</b> · {{ flight.aircraft.registration }}
             <div class="muted small">{{ flight.aircraft.seats }} Passagierplätze · {{ flight.aircraft.cruise_speed_kt }} kt Reisegeschwindigkeit{% if flight.aircraft.year %} · Baujahr {{ flight.aircraft.year }}{% endif %}</div>

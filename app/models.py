@@ -35,6 +35,14 @@ class User(UserMixin, db.Model):
     email_confirmed_at = db.Column(db.DateTime)
     email_notifications = db.Column(db.Boolean, default=True, nullable=False)
 
+    # Legal consent & account state
+    terms_accepted_at = db.Column(db.DateTime)
+    terms_version = db.Column(db.String(20))
+    deleted_at = db.Column(db.DateTime)
+
+    # Uploads
+    avatar_filename = db.Column(db.String(80))
+
     # Pilot data
     pilot_status = db.Column(db.String(20), default="none")  # none, pending, verified, rejected
     license_type = db.Column(db.String(20))
@@ -71,6 +79,18 @@ class User(UserMixin, db.Model):
     @property
     def initials(self):
         return (self.first_name[:1] + self.last_name[:1]).upper()
+
+    @property
+    def avatar_url(self):
+        if not self.avatar_filename:
+            return None
+        from flask import url_for
+
+        return url_for("uploads.media", kind="avatars", filename=self.avatar_filename)
+
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
 
     @property
     def avatar_color(self):
@@ -127,6 +147,15 @@ class Aircraft(db.Model):
     cruise_speed_kt = db.Column(db.Integer, default=110)
     year = db.Column(db.Integer)
     description = db.Column(db.Text)
+    photo_filename = db.Column(db.String(80))
+
+    @property
+    def photo_url(self):
+        if not self.photo_filename:
+            return None
+        from flask import url_for
+
+        return url_for("uploads.media", kind="aircraft", filename=self.photo_filename)
 
     @property
     def label(self):
@@ -353,6 +382,35 @@ class FlightWish(db.Model):
     user = db.relationship("User")
     departure = db.relationship("Airport", foreign_keys=[departure_id])
     arrival = db.relationship("Airport", foreign_keys=[arrival_id])
+
+
+class PilotDocument(db.Model):
+    """Licence / medical proof uploaded for pilot verification. Stored privately, never publicly served."""
+
+    KINDS = {"license": "Pilotenlizenz", "medical": "Medical", "other": "Sonstiger Nachweis"}
+    STATUS = {"pending": "In Prüfung", "approved": "Geprüft", "rejected": "Abgelehnt"}
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)
+    filename = db.Column(db.String(80), nullable=False)  # random name on disk
+    original_name = db.Column(db.String(200))
+    content_type = db.Column(db.String(60), nullable=False)
+    size = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(20), default="pending", nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime)
+    consent_at = db.Column(db.DateTime)  # explicit consent (Art. 9 DSGVO) for health data in medical proofs
+
+    user = db.relationship("User", backref=db.backref("documents", lazy=True, cascade="all, delete-orphan"))
+
+    @property
+    def kind_label(self):
+        return self.KINDS.get(self.kind, self.kind)
+
+    @property
+    def status_label(self):
+        return self.STATUS.get(self.status, self.status)
 
 
 class Payout(db.Model):

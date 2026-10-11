@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 from urllib.parse import urlparse
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from ..extensions import db
@@ -57,7 +57,8 @@ def register():
             for e in errors:
                 flash(e, "danger")
             return render_template("auth/register.html", form=form)
-        user = User(email=email, first_name=first, last_name=last, city=form.get("city", "").strip() or None)
+        user = User(email=email, first_name=first, last_name=last, city=form.get("city", "").strip() or None,
+                    terms_accepted_at=datetime.utcnow(), terms_version=current_app.config["TERMS_VERSION"])
         user.set_password(password)
         db.session.add(user)
         db.session.flush()

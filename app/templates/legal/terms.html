@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}AGB – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose legal">
+  {% include "legal/_notice.html" %}
+  <h1>Allgemeine Geschäftsbedingungen</h1>
+  <p class="muted">Version {{ config.TERMS_VERSION }} · {{ legal('name', 'Name / Firma') }}, {{ legal('address', 'Anschrift') }} („Skyhop“, „wir“)</p>
+
+  <h2>§ 1 Geltungsbereich und Rolle von Skyhop</h2>
+  <ol>
+    <li>Diese AGB gelten für die Nutzung der Plattform Skyhop durch Passagiere und Pilot:innen (gemeinsam „Nutzer:innen“).</li>
+    <li>Skyhop ist eine <b>Vermittlungsplattform</b>. Wir bringen Privatpilot:innen, die Plätze in ihrem Flugzeug anbieten, mit Passagieren zusammen, wickeln die Zahlung ab und zahlen die Kostenbeteiligung an die Pilot:innen aus.</li>
+    <li>Skyhop ist <b>kein Luftfahrtunternehmen</b> und führt selbst keine Flüge durch. Der Mitflug kommt unmittelbar zwischen Passagier und Pilot:in zustande. Die Pilot:in ist verantwortliche:r Luftfahrzeugführer:in (Pilot in Command) und trägt die alleinige Verantwortung für die Durchführung des Flugs.</li>
+  </ol>
+
+  <h2>§ 2 Nicht-gewerbliche Flüge auf Kostenteilungsbasis</h2>
+  <ol>
+    <li>Über Skyhop dürfen ausschließlich nicht-gewerbliche Flüge auf Kostenteilungsbasis im Sinne der Verordnung (EU) Nr. 965/2012 (Anhang VII, NCO) angeboten werden. Höchstens sechs Personen einschließlich der Pilot:in dürfen sich die <b>direkten Kosten</b> des Flugs (Charter- bzw. Mietkosten, Treibstoff, Lande-, Anflug- und Flugsicherungsgebühren) teilen.</li>
+    <li>Die Pilot:in trägt mindestens einen gleich großen Anteil an den direkten Kosten wie jede:r Passagier:in. Skyhop berechnet den Preis pro Platz automatisch als <i>direkte Kosten ÷ (Anzahl der Plätze + 1)</i>. Gewinnerzielung durch die Pilot:in ist unzulässig.</li>
+    <li>Rundflüge und Flüge, deren Zweck nicht das gemeinsame Fliegen ist, dürfen nur angeboten werden, soweit dies nach den geltenden luftfahrtrechtlichen Vorschriften als Kostenteilung zulässig ist. Die Pilot:in ist für die Einhaltung verantwortlich.</li>
+  </ol>
+
+  <h2>§ 3 Registrierung und Konto</h2>
+  <ol>
+    <li>Die Nutzung setzt ein Konto voraus. Du musst mindestens 18 Jahre alt sein; Minderjährige dürfen nur in Begleitung und mit Zustimmung eines Erziehungsberechtigten mitfliegen, der die Buchung vornimmt.</li>
+    <li>Deine Angaben müssen wahr und vollständig sein. Die E-Mail-Adresse muss bestätigt werden (Double-Opt-in), bevor gebucht oder angeboten werden kann.</li>
+    <li>Zugangsdaten sind geheim zu halten. Jede Person darf nur ein Konto führen.</li>
+  </ol>
+
+  <h2>§ 4 Pflichten der Pilot:innen</h2>
+  <ol>
+    <li>Pilot:innen müssen eine gültige Lizenz (LAPL, PPL, CPL oder ATPL) mit den erforderlichen Berechtigungen, ein gültiges flugmedizinisches Tauglichkeitszeugnis und die für die Passagierbeförderung vorgeschriebene Erfahrung (mindestens drei Starts und Landungen in den letzten 90 Tagen, FCL.060) besitzen und dies auf Verlangen nachweisen.</li>
+    <li>Das Luftfahrzeug muss lufttüchtig, ordnungsgemäß zugelassen und gemäß Verordnung (EG) Nr. 785/2004 bzw. dem Luftfahrtgesetz <b>haftpflicht- und passagierversichert</b> sein.</li>
+    <li>Flugangebote müssen wahrheitsgemäß sein (Route, Zeit, Flugzeug, freie Plätze, direkte Kosten). Änderungen sind über Skyhop mitzuteilen.</li>
+    <li>Die Pilot:in entscheidet allein über die Durchführung des Flugs (z. B. Wetter, Masse und Schwerpunkt, technischer Zustand) und darf Flüge jederzeit aus Sicherheitsgründen absagen oder abbrechen.</li>
+    <li>Pilot:innen hinterlegen einen Auszahlungsweg (Stripe oder PayPal) und sind für die steuerliche Behandlung der erhaltenen Kostenbeteiligung selbst verantwortlich.</li>
+  </ol>
+
+  <h2>§ 5 Pflichten der Passagiere</h2>
+  <ol>
+    <li>Passagiere machen wahrheitsgemäße Angaben, insbesondere zu Körpergewicht und Gepäck, und erscheinen pünktlich mit gültigem Lichtbildausweis am Treffpunkt.</li>
+    <li>Den Anweisungen der Pilot:in ist Folge zu leisten. Wer erkennbar unter dem Einfluss von Alkohol oder Drogen steht, kann von der Pilot:in ausgeschlossen werden; die Buchung gilt dann als nicht wahrgenommen.</li>
+  </ol>
+
+  <h2>§ 6 Buchung und Vertragsschluss</h2>
+  <ol>
+    <li>Das Flugangebot einer Pilot:in ist eine Einladung, eine Anfrage zu stellen. Mit der Buchungsanfrage gibt der Passagier ein Angebot ab, das die Pilot:in annehmen oder ablehnen kann.</li>
+    <li>Nimmt die Pilot:in an, wird der Passagier zur Zahlung aufgefordert. Mit Eingang der Zahlung ist die Buchung verbindlich.</li>
+  </ol>
+
+  <h2>§ 7 Preise, Servicegebühr und Zahlung</h2>
+  <ol>
+    <li>Der angezeigte Preis pro Platz ist ein Endpreis. Darin enthalten ist eine Servicegebühr von {{ (config.SERVICE_FEE_RATE * 100)|int }} % für die Vermittlung, Zahlungsabwicklung und den Betrieb der Plattform.</li>
+    <li>Die Zahlung erfolgt über unsere Zahlungsdienstleister Stripe bzw. PayPal. Skyhop nimmt den Betrag im Namen der Pilot:in entgegen und zahlt die Kostenbeteiligung (Preis abzüglich Servicegebühr) nach Durchführung des Flugs und einer Haltefrist an die Pilot:in aus.</li>
+  </ol>
+
+  <h2>§ 8 Stornierung und Erstattung</h2>
+  <p>Es gelten unsere <a href="{{ url_for('main.cancellation') }}">Stornobedingungen</a>.</p>
+
+  <h2>§ 9 Rücktrittsrecht für Verbraucher:innen</h2>
+  <p>Mitflüge zu einem bestimmten Termin sind Dienstleistungen im Bereich der Personenbeförderung bzw. Freizeitbetätigung mit spezifischem Termin; für sie besteht nach § 1 Abs. 2 bzw. § 18 Abs. 1 Z 10 Fern- und Auswärtsgeschäfte-Gesetz (FAGG) <b>kein gesetzliches Rücktrittsrecht</b>. Unabhängig davon räumt Skyhop die in den Stornobedingungen beschriebenen Stornierungsmöglichkeiten ein.</p>
+
+  <h2>§ 10 Bewertungen und Inhalte</h2>
+  <ol>
+    <li>Nach einem Flug können sich Passagier und Pilot:in gegenseitig bewerten. Bewertungen müssen wahr, sachlich und auf den tatsächlichen Flug bezogen sein.</li>
+    <li>Inhalte, die rechtswidrig, beleidigend, irreführend oder werblich sind oder Kontaktdaten zur Umgehung der Plattform enthalten, dürfen nicht veröffentlicht werden. Wir dürfen solche Inhalte entfernen.</li>
+    <li>Mit dem Hochladen von Fotos räumst du uns das einfache, unentgeltliche Recht ein, diese auf der Plattform anzuzeigen. Du versicherst, die erforderlichen Rechte zu besitzen.</li>
+  </ol>
+
+  <h2>§ 11 Haftung</h2>
+  <ol>
+    <li>Skyhop haftet nicht für die Durchführung des Flugs, für Verspätungen oder Absagen durch die Pilot:in oder für Schäden, die im Zusammenhang mit dem Flug entstehen; hierfür haften die Pilot:in bzw. deren Versicherung nach den gesetzlichen Bestimmungen.</li>
+    <li>Im Übrigen haftet Skyhop nur für Vorsatz und grobe Fahrlässigkeit. Diese Einschränkung gilt nicht für Personenschäden und nicht, soweit zwingendes Recht (insbesondere das Konsumentenschutzgesetz) entgegensteht.</li>
+    <li>Wir bemühen uns um eine hohe Verfügbarkeit der Plattform, können eine ununterbrochene Verfügbarkeit aber nicht zusichern.</li>
+  </ol>
+
+  <h2>§ 12 Sperre und Kündigung</h2>
+  <p>Du kannst dein Konto jederzeit <a href="{{ url_for('profile.delete') }}">löschen</a>. Wir können Konten bei Verstößen gegen diese AGB, insbesondere bei falschen Angaben zu Lizenz oder Versicherung oder bei gewerblichen Angeboten, sperren. Bereits bezahlte Buchungen werden in diesem Fall erstattet.</p>
+
+  <h2>§ 13 Änderungen der AGB</h2>
+  <p>Wir können diese AGB mit Wirkung für die Zukunft ändern. Über wesentliche Änderungen informieren wir dich mindestens vier Wochen vorher per E-Mail. Bereits verbindliche Buchungen bleiben unberührt.</p>
+
+  <h2>§ 14 Anwendbares Recht und Gerichtsstand</h2>
+  <p>Es gilt österreichisches Recht unter Ausschluss der Verweisungsnormen des internationalen Privatrechts und des UN-Kaufrechts. Für Verbraucher:innen bleiben die zwingenden Bestimmungen des Staates ihres gewöhnlichen Aufenthalts unberührt; Gerichtsstand ist für sie das Gericht ihres Wohnsitzes (§ 14 KSchG). Für Unternehmer:innen ist der Sitz von Skyhop Gerichtsstand.</p>
+</div>
+{% endblock %}

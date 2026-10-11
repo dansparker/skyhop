@@ -55,6 +55,27 @@ EU-Kostenteilungsregeln.
   erste ungelesene), im Profil abschaltbar
 - HTML- + Text-Mails über SMTP (jeder Anbieter); ohne SMTP landen Mails im **Dev-Postfach** unter `/dev/mails`
 
+**Uploads**
+- **Profilfotos** und **Flugzeugfotos** (auf Flugkarten und Flugdetails): werden mit Pillow geprüft, verkleinert,
+  als WebP gespeichert und von allen Metadaten befreit (EXIF inkl. GPS-Position)
+- **Lizenz- und Medical-Nachweise** (PDF/JPG/PNG) sind Pflicht für die Pilotenverifizierung: Prüfung per
+  Magic Bytes, private Ablage außerhalb des Web-Roots, Abruf nur durch Eigentümer:in und Admins (mit
+  `no-store` und Sandbox-CSP), ausdrückliche Einwilligung für Gesundheitsdaten (Art. 9 DSGVO),
+  automatische Löschung nach der Prüfung (Standard 30 Tage)
+- Größenlimit, zufällige Dateinamen, Schutz vor Path Traversal und Decompression Bombs
+
+**Rechtliches & DSGVO**
+- Vorlagen für **Impressum** (§ 5 ECG, § 25 MedienG), **Datenschutzerklärung** (Art. 13 DSGVO),
+  **AGB** und **Stornobedingungen** nach österreichischem Recht – Betreiberdaten kommen aus der `.env`,
+  fehlende Angaben werden gelb markiert
+- Zustimmung zu AGB wird mit Zeitpunkt und Version gespeichert; Links in Registrierung und Checkout
+- **Datenexport** (Art. 15/20) als JSON und **Kontolöschung** (Art. 17) mit Anonymisierung, Erstattung
+  offener Buchungen und Absage eigener Flüge – Buchungsdaten bleiben für die Aufbewahrungspflicht (§ 132 BAO)
+- Keine externen Schriften, nur technisch notwendige Cookies → kein Cookie-Banner nötig
+
+> ⚖️ Die Rechtstexte sind sorgfältig erstellte **Vorlagen** und ersetzen keine Rechtsberatung. Vor dem
+> Livegang bitte anwaltlich prüfen lassen.
+
 **Plattform**
 - Registrierung/Login, Profile mit öffentlicher Seite, gegenseitige Bewertungen (1–5 Sterne)
 - Nachrichten (Chat pro Flug/Person) mit Ungelesen-Zählern und Lesebestätigung
@@ -100,7 +121,8 @@ Ohne `.env` läuft alles im Demo-Modus: Zahlungen werden simuliert, E-Mails ersc
 
 ```bash
 pytest                     # Tests ausführen
-flask --app run payouts    # vergangene Flüge abschließen + fällige Auszahlungen ausführen (für Cron)
+flask --app run cron       # alle periodischen Aufgaben (stündlich per Cron/Aufgabenplanung)
+flask --app run payouts    # nur: vergangene Flüge abschließen + fällige Auszahlungen ausführen
 flask --app run reset-db   # Datenbank leeren
 ```
 
@@ -117,6 +139,8 @@ Alle Variablen mit Erklärung stehen in [`.env.example`](.env.example). Die wich
 | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_MODE`, `PAYPAL_WEBHOOK_ID` | PayPal direkt (REST API v2) |
 | `PAYMENT_PROVIDERS`                        | Angebotene Anbieter + Reihenfolge, z. B. `stripe,paypal`     |
 | `PAYOUT_DELAY_HOURS`, `AUTO_COMPLETE_HOURS` | Haltefrist vor Auszahlung, automatischer Flugabschluss      |
+| `UPLOAD_FOLDER`, `MAX_UPLOAD_MB`, `DOCUMENT_RETENTION_DAYS` | Upload-Ablage, Größenlimit, Löschfrist für Nachweise |
+| `LEGAL_*`, `TERMS_VERSION`                 | Betreiberdaten für Impressum/Datenschutz/AGB, AGB-Version    |
 | `DATABASE_URL`                             | SQLAlchemy-URL, Standard: `instance/skyhop.db`               |
 | `TRUST_PROXY`                              | `1` hinter einem Reverse-Proxy (korrekte Client-IPs)         |
 
@@ -159,7 +183,8 @@ Beide Varianten lassen sich kombinieren: `PAYMENT_PROVIDERS=stripe,paypal` zeigt
   „recipient“-Servicevereinbarung für dein Plattform-Land unterstützt werden.
 - **PayPal Payouts:** Muss für das PayPal-Geschäftskonto freigeschaltet sein (im Developer-Dashboard unter
   *App-Funktionen*). Der Status wird beim Cron-Lauf abgefragt.
-- **Cron:** `flask --app run payouts` stündlich ausführen (Linux: crontab, Windows: Aufgabenplanung).
+- **Cron:** `flask --app run cron` stündlich ausführen (Linux: crontab, Windows: Aufgabenplanung) – erledigt
+  Auszahlungen und löscht geprüfte Nachweise nach Ablauf der Frist.
 
 > Hinweis zur Kasse: Zahlungen über Stripe landen im Stripe-Guthaben, PayPal-Zahlungen im PayPal-Guthaben.
 > Wer beides anbietet, muss für ausreichend Guthaben auf dem jeweiligen Auszahlungsweg sorgen.

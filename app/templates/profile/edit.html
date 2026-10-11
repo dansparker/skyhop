@@ -4,9 +4,25 @@
 {% block content %}
 <div class="container page narrow">
   <h1>Einstellungen</h1>
+  <section class="form-card upload-card">
+    <h2>Profilfoto</h2>
+    <div class="pilot-row">
+      {{ avatar(current_user, 'xl') }}
+      <div class="grow">
+        <form method="post" action="{{ url_for('uploads.avatar') }}" enctype="multipart/form-data" class="upload-row">
+          {{ csrf() }}
+          <input type="file" name="photo" accept="image/jpeg,image/png,image/webp" required>
+          <button class="btn btn-primary btn-sm" type="submit">Hochladen</button>
+        </form>
+        {% if current_user.avatar_filename %}<form method="post" action="{{ url_for('uploads.avatar') }}">{{ csrf() }}<input type="hidden" name="remove" value="1"><button class="btn btn-ghost btn-sm">Foto entfernen</button></form>{% endif %}
+        <p class="small muted">Ein freundliches Foto schafft Vertrauen. JPG, PNG oder WebP, max. {{ config.MAX_UPLOAD_BYTES // 1000000 }} MB – wird quadratisch zugeschnitten, Metadaten werden entfernt.</p>
+      </div>
+    </div>
+  </section>
   <form method="post" class="form-card">
     {{ csrf() }}
-    <div class="pilot-row">{{ avatar(current_user, 'lg') }}<div><b>{{ current_user.email }}</b><div class="small muted">Dein Avatar wird aus deinen Initialen erstellt.</div></div></div>
+    <h2>Persönliche Daten</h2>
+    <p class="small muted">E-Mail: <b>{{ current_user.email }}</b></p>
     <div class="field-row">
       <label class="field"><span>Vorname</span><input name="first_name" required value="{{ form.get('first_name', '') }}"></label>
       <label class="field"><span>Nachname</span><input name="last_name" required value="{{ form.get('last_name', '') }}"></label>
@@ -30,5 +46,13 @@
       <button class="btn btn-primary" type="submit">Speichern</button>
     </div>
   </form>
+  <section class="form-card danger-zone">
+    <h2>Deine Daten</h2>
+    <p class="small">Du kannst jederzeit alle Daten, die Skyhop über dich speichert, herunterladen oder dein Konto löschen. Mehr dazu in der <a href="{{ url_for('main.privacy') }}">Datenschutzerklärung</a>.</p>
+    <div class="form-actions form-actions-left">
+      <a class="btn btn-ghost" href="{{ url_for('profile.data_export') }}">⬇ Datenexport (JSON)</a>
+      <a class="btn btn-danger-ghost" href="{{ url_for('profile.delete') }}">Konto löschen</a>
+    </div>
+  </section>
 </div>
 {% endblock %}

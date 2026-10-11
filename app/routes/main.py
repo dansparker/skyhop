@@ -45,7 +45,22 @@ def safety():
 
 @bp.route("/impressum")
 def imprint():
-    return render_template("pages/imprint.html")
+    return render_template("legal/imprint.html")
+
+
+@bp.route("/datenschutz")
+def privacy():
+    return render_template("legal/privacy.html")
+
+
+@bp.route("/agb")
+def terms():
+    return render_template("legal/terms.html")
+
+
+@bp.route("/stornobedingungen")
+def cancellation():
+    return render_template("legal/cancellation.html")
 
 
 @bp.route("/benachrichtigungen")

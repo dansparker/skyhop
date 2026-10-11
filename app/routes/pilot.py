@@ -4,7 +4,7 @@ from flask_login import current_user, login_required
 
 from .. import payouts as payout_service
 from ..extensions import db
-from ..models import Aircraft, Flight, Payout, User
+from ..models import Aircraft, Flight, Payout, PilotDocument, User
 from ..utils import find_airport, notify, parse_int, pilot_required
 
 bp = Blueprint("pilot", __name__, url_prefix="/pilot")
@@ -35,10 +35,16 @@ def become():
             errors.append("Bitte gib deine Flugstunden an.")
         if not request.form.get("medical"):
             errors.append("Ein gültiges Medical ist Voraussetzung.")
+        uploaded = {d.kind for d in current_user.documents if d.status != "rejected"}
+        if "license" not in uploaded:
+            errors.append("Bitte lade einen Nachweis deiner Pilotenlizenz hoch.")
+        if "medical" not in uploaded:
+            errors.append("Bitte lade einen Nachweis deines Medicals hoch.")
         if errors:
             for e in errors:
                 flash(e, "danger")
-            return render_template("pilot/become.html", licenses=LICENSES, form=request.form)
+            return render_template("pilot/become.html", licenses=LICENSES, form=request.form,
+                                   documents=current_user.documents, kinds=PilotDocument.KINDS)
         current_user.license_type = license_type
         current_user.license_number = number
         current_user.flight_hours = hours
@@ -55,7 +61,8 @@ def become():
         "flight_hours": current_user.flight_hours or "",
         "home_airport": current_user.home_airport.label if current_user.home_airport else "",
     }
-    return render_template("pilot/become.html", licenses=LICENSES, form=form)
+    return render_template("pilot/become.html", licenses=LICENSES, form=form,
+                           documents=current_user.documents, kinds=PilotDocument.KINDS)
 
 
 @bp.route("/flugzeuge")

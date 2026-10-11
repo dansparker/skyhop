@@ -22,7 +22,7 @@
 html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color: var(--text);
   background: var(--bg);
   line-height: 1.55;
@@ -424,3 +424,35 @@ code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: .88
 .kpis-3 { grid-template-columns: repeat(3, 1fr); }
 a.kpi { color: inherit; }
 a.kpi:hover { text-decoration: none; border-color: var(--blue); }
+
+/* Uploads */
+img.avatar { object-fit: cover; background: var(--line); }
+.upload-card { margin-bottom: 18px; }
+.upload-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.upload-row input[type=file], .upload-box input[type=file] { padding: 8px; font-size: .88rem; }
+.upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.upload-box { border: 2px dashed var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.upload-box h3 { margin: 0; }
+.upload-box p { margin: 0; }
+.upload-box.done { border-style: solid; border-color: #bbf7d0; background: #f0fdf4; }
+.doc-icon { font-size: 1.5rem; }
+.doc-links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.aircraft-photo { width: 96px; height: 64px; object-fit: cover; border-radius: 10px; flex-shrink: 0; }
+.aircraft-photo-lg { width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px; margin-bottom: 12px; }
+.flight-card-photo { height: 140px; background-size: cover; background-position: center; }
+.danger-zone { border-color: #fecaca; margin-top: 18px; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-danger:hover { background: #b91c1c; }
+.form-actions-left { justify-content: flex-start; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Legal pages */
+mark.todo { background: #fef08a; color: #713f12; padding: 0 4px; border-radius: 4px; font-weight: 600; }
+.legal h2 { font-size: 1.15rem; margin-top: 1.8em; }
+.legal-table { margin: 12px 0 18px; }
+.legal-table th:first-child, .legal-table td:first-child { width: 30%; }
+.legal-table th { text-transform: none; letter-spacing: 0; font-size: .85rem; }
+.legal-table td:first-child { font-weight: 600; color: var(--ink); }
+.legal-table td { font-size: .92rem; }
+.toc { display: flex; flex-direction: column; gap: 4px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin: 16px 0; font-size: .92rem; }
+@media (max-width: 760px) { .upload-grid { grid-template-columns: 1fr; } }

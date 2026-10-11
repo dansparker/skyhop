@@ -9,7 +9,7 @@
   </div>
   {% for a in aircraft %}
     <div class="box aircraft-row">
-      <div class="aircraft-icon">🛩</div>
+      {% if a.photo_url %}<img class="aircraft-photo" src="{{ a.photo_url }}" alt="{{ a.label }}">{% else %}<div class="aircraft-icon">🛩</div>{% endif %}
       <div class="grow">
         <b>{{ a.manufacturer }} {{ a.model }}</b> · {{ a.registration }}
         <div class="small muted">{{ a.seats }} Passagierplätze · {{ a.cruise_speed_kt }} kt{% if a.year %} · Baujahr {{ a.year }}{% endif %}</div>

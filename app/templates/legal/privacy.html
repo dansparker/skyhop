@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Datenschutzerklärung – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose legal">
+  {% include "legal/_notice.html" %}
+  <h1>Datenschutzerklärung</h1>
+  <p class="muted">Stand: {{ config.TERMS_VERSION }} · Informationen gemäß Art. 13 und 14 Datenschutz-Grundverordnung (DSGVO) und Datenschutzgesetz (DSG)</p>
+
+  <nav class="toc">
+    <a href="#verantwortlich">1. Verantwortlicher</a>
+    <a href="#daten">2. Welche Daten wir verarbeiten</a>
+    <a href="#zwecke">3. Zwecke und Rechtsgrundlagen</a>
+    <a href="#empfaenger">4. Empfänger und Auftragsverarbeiter</a>
+    <a href="#drittland">5. Übermittlung in Drittländer</a>
+    <a href="#speicherdauer">6. Speicherdauer</a>
+    <a href="#cookies">7. Cookies</a>
+    <a href="#rechte">8. Deine Rechte</a>
+    <a href="#sicherheit">9. Datensicherheit</a>
+  </nav>
+
+  <h2 id="verantwortlich">1. Verantwortlicher</h2>
+  <p>
+    {{ legal('name', 'Name / Firma') }}<br>
+    {{ legal('address', 'Anschrift') }}<br>
+    E-Mail für Datenschutzanfragen: {{ legal('privacy_email', 'Datenschutz-E-Mail') }}
+  </p>
+  {% if config.LEGAL_DPO %}<p>Datenschutzbeauftragte:r: {{ config.LEGAL_DPO }}</p>{% endif %}
+
+  <h2 id="daten">2. Welche Daten wir verarbeiten</h2>
+  <table class="table legal-table">
+    <thead><tr><th>Kategorie</th><th>Daten</th></tr></thead>
+    <tbody>
+      <tr><td>Konto</td><td>Vor- und Nachname, E-Mail-Adresse, Passwort (nur als Hash), Wohnort, Telefonnummer (freiwillig), Profiltext und Profilfoto (freiwillig), Zeitpunkt der Zustimmung zu AGB und E-Mail-Bestätigung</td></tr>
+      <tr><td>Pilot:innen</td><td>Lizenzart, Lizenznummer, Flugstunden, Heimatflugplatz, Flugzeugdaten und -fotos, hochgeladene Lizenz- und Medical-Nachweise, Auszahlungsweg (Stripe-Konto-ID bzw. PayPal-E-Mail-Adresse)</td></tr>
+      <tr><td>Gesundheitsdaten</td><td>Im Medical-Nachweis enthaltene Angaben zur flugmedizinischen Tauglichkeit (besondere Kategorie nach Art. 9 DSGVO) – nur mit deiner ausdrücklichen Einwilligung</td></tr>
+      <tr><td>Flüge &amp; Buchungen</td><td>Angebotene Flüge, Buchungsanfragen, Nachrichten an Pilot:in, Buchungsstatus, Beträge, Zahlungsreferenzen, Erstattungen, Auszahlungen</td></tr>
+      <tr><td>Kommunikation</td><td>Nachrichten zwischen Nutzer:innen, Bewertungen, Flugwünsche, Benachrichtigungen</td></tr>
+      <tr><td>Newsletter</td><td>E-Mail-Adresse, Zeitpunkt und IP-Adresse von Anmeldung und Bestätigung (Nachweis des Double-Opt-in), Abmeldezeitpunkt</td></tr>
+      <tr><td>Technische Daten</td><td>IP-Adresse, Zeitpunkt, aufgerufene Seite, Browserinformationen (Server-Logfiles)</td></tr>
+    </tbody>
+  </table>
+  <p><b>Zahlungsdaten</b> (Kartennummer, IBAN, PayPal-Zugangsdaten) gibst du ausschließlich bei Stripe bzw. PayPal ein. Wir erhalten sie nicht.</p>
+
+  <h2 id="zwecke">3. Zwecke und Rechtsgrundlagen</h2>
+  <table class="table legal-table">
+    <thead><tr><th>Zweck</th><th>Rechtsgrundlage</th></tr></thead>
+    <tbody>
+      <tr><td>Bereitstellung des Kontos, Vermittlung, Durchführung und Abrechnung von Mitflügen, Nachrichten zwischen Nutzer:innen, Auszahlungen an Pilot:innen</td><td>Vertragserfüllung, Art. 6 Abs. 1 lit. b DSGVO</td></tr>
+      <tr><td>Prüfung von Lizenz und Flugerfahrung der Pilot:innen (Sicherheit der Passagiere)</td><td>Vertragserfüllung und berechtigtes Interesse, Art. 6 Abs. 1 lit. b und f DSGVO</td></tr>
+      <tr><td>Prüfung des Medical-Nachweises</td><td>Ausdrückliche Einwilligung, Art. 9 Abs. 2 lit. a DSGVO – jederzeit widerrufbar (dann ist keine Verifizierung möglich)</td></tr>
+      <tr><td>E-Mail-Bestätigung, Passwort-Zurücksetzen, Buchungs- und Servicebenachrichtigungen</td><td>Vertragserfüllung, Art. 6 Abs. 1 lit. b DSGVO</td></tr>
+      <tr><td>Newsletter</td><td>Einwilligung, Art. 6 Abs. 1 lit. a DSGVO und § 174 TKG 2021 – jederzeit widerrufbar</td></tr>
+      <tr><td>Aufbewahrung von Buchungs- und Zahlungsunterlagen</td><td>Rechtliche Verpflichtung, Art. 6 Abs. 1 lit. c DSGVO iVm § 132 BAO, § 212 UGB</td></tr>
+      <tr><td>Bewertungen, Missbrauchs- und Betrugsprävention, IT-Sicherheit, Geltendmachung von Rechtsansprüchen</td><td>Berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO</td></tr>
+    </tbody>
+  </table>
+  <p>Ohne die für den Vertrag erforderlichen Daten können wir dir kein Konto bereitstellen und keine Buchungen vermitteln. Eine automatisierte Entscheidungsfindung einschließlich Profiling findet nicht statt.</p>
+
+  <h2 id="empfaenger">4. Empfänger und Auftragsverarbeiter</h2>
+  <ul>
+    <li><b>Andere Nutzer:innen:</b> Pilot:innen sehen Vorname, Initiale des Nachnamens, Profil und Nachricht der anfragenden Passagiere; Passagiere sehen das Profil der Pilot:in. Telefonnummern werden erst nach bezahlter Buchung gegenseitig angezeigt.</li>
+    <li><b>Hosting:</b> {{ legal('hosting', 'Hosting-Anbieter, Sitz') }} (Auftragsverarbeiter, Art. 28 DSGVO).</li>
+    <li><b>E-Mail-Versand:</b> {{ legal('mail_provider', 'E-Mail-Dienstleister, Sitz') }} (Auftragsverarbeiter).</li>
+    <li><b>Zahlungen und Auszahlungen über Stripe:</b> Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irland – eigene Verantwortliche für die Zahlungsabwicklung und Identitätsprüfung (Stripe Connect). <a href="https://stripe.com/de/privacy">Datenschutzhinweise von Stripe</a>.</li>
+    <li><b>Zahlungen und Auszahlungen über PayPal:</b> PayPal (Europe) S.à r.l. et Cie, S.C.A., 22–24 Boulevard Royal, L-2449 Luxemburg – eigene Verantwortliche. <a href="https://www.paypal.com/de/legalhub/privacy-full">Datenschutzhinweise von PayPal</a>.</li>
+    <li><b>Kartendarstellung:</b> Beim Anzeigen von Karten lädt dein Browser Kartenkacheln von der OpenStreetMap Foundation (St John’s Innovation Centre, Cowley Road, Cambridge, CB4 0WS, Vereinigtes Königreich) und die Kartenbibliothek Leaflet vom Content-Delivery-Netzwerk unpkg. Dabei wird deine IP-Adresse an diese Anbieter übertragen (berechtigtes Interesse an einer funktionsfähigen Kartendarstellung, Art. 6 Abs. 1 lit. f DSGVO).</li>
+    <li><b>Behörden und Berater:</b> soweit gesetzlich vorgeschrieben (z. B. Finanzbehörden) bzw. an Steuerberater:innen und Rechtsanwält:innen, die zur Verschwiegenheit verpflichtet sind.</li>
+  </ul>
+
+  <h2 id="drittland">5. Übermittlung in Drittländer</h2>
+  <p>Für das Vereinigte Königreich besteht ein Angemessenheitsbeschluss der EU-Kommission. Stripe und PayPal können Daten innerhalb ihrer Konzerne auch in die USA übermitteln; dies erfolgt auf Grundlage des EU-US Data Privacy Framework bzw. von Standardvertragsklauseln (Art. 45, 46 DSGVO).</p>
+
+  <h2 id="speicherdauer">6. Speicherdauer</h2>
+  <ul>
+    <li><b>Konto- und Profildaten:</b> bis zur Löschung deines Kontos.</li>
+    <li><b>Lizenz- und Medical-Nachweise:</b> bis zur Prüfung und danach höchstens {{ config.DOCUMENT_RETENTION_DAYS }} Tage; anschließend werden die Dateien automatisch gelöscht. Gespeichert bleibt nur das Prüfergebnis.</li>
+    <li><b>Buchungs-, Zahlungs- und Auszahlungsdaten:</b> 7 Jahre ab Ende des Kalenderjahres (§ 132 BAO), bei laufenden Verfahren auch länger.</li>
+    <li><b>Nachrichten und Bewertungen:</b> bis zur Löschung deines Kontos; danach werden deine Nachrichten durch „[Nachricht gelöscht]“ ersetzt und dein Name anonymisiert.</li>
+    <li><b>Newsletter-Nachweis:</b> solange du angemeldet bist und danach bis zu 3 Jahre zum Nachweis der Einwilligung.</li>
+    <li><b>Server-Logfiles:</b> höchstens 30 Tage.</li>
+  </ul>
+
+  <h2 id="cookies">7. Cookies</h2>
+  <p>Wir verwenden ausschließlich <b>technisch notwendige Cookies</b>: ein Sitzungs-Cookie (Anmeldung, Formularschutz) und – nur wenn du „Angemeldet bleiben“ wählst – ein Cookie zur dauerhaften Anmeldung. Wir setzen keine Analyse-, Tracking- oder Werbe-Cookies ein. Eine Einwilligung ist daher nicht erforderlich (§ 165 Abs. 3 TKG 2021).</p>
+
+  <h2 id="rechte">8. Deine Rechte</h2>
+  <p>Du hast das Recht auf <b>Auskunft</b> (Art. 15), <b>Berichtigung</b> (Art. 16), <b>Löschung</b> (Art. 17), <b>Einschränkung der Verarbeitung</b> (Art. 18), <b>Datenübertragbarkeit</b> (Art. 20) und <b>Widerspruch</b> gegen Verarbeitungen auf Grundlage berechtigter Interessen (Art. 21 DSGVO). Erteilte Einwilligungen kannst du jederzeit mit Wirkung für die Zukunft <b>widerrufen</b>.</p>
+  <p>Vieles kannst du direkt selbst erledigen:</p>
+  <ul>
+    <li><a href="{{ url_for('profile.edit') }}">Profil bearbeiten</a> – Daten berichtigen, E-Mail-Benachrichtigungen und Newsletter abbestellen</li>
+    <li><a href="{{ url_for('profile.data_export') }}">Datenexport</a> – alle über dich gespeicherten Daten als JSON-Datei herunterladen</li>
+    <li><a href="{{ url_for('profile.delete') }}">Konto löschen</a></li>
+  </ul>
+  <p>Für alle anderen Anliegen schreib an {{ legal('privacy_email', 'Datenschutz-E-Mail') }}. Wenn du meinst, dass wir deine Daten rechtswidrig verarbeiten, kannst du dich bei der <b>Österreichischen Datenschutzbehörde</b> beschweren: Barichgasse 40–42, 1030 Wien, <a href="mailto:dsb@dsb.gv.at">dsb@dsb.gv.at</a>, <a href="https://www.dsb.gv.at">www.dsb.gv.at</a>.</p>
+
+  <h2 id="sicherheit">9. Datensicherheit</h2>
+  <p>Die Übertragung erfolgt verschlüsselt (HTTPS). Passwörter speichern wir nur als gesalzenen Hash. Hochgeladene Nachweise liegen außerhalb des öffentlich erreichbaren Bereichs und sind nur für dich und das Prüfteam abrufbar; Metadaten (z. B. GPS-Position in Fotos) werden beim Hochladen von Bildern entfernt.</p>
+</div>
+{% endblock %}

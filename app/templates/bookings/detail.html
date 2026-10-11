@@ -73,6 +73,7 @@
       <a class="btn btn-accent btn-lg" href="{{ url_for('bookings.checkout', booking_id=booking.id) }}">Jetzt bezahlen</a>
     {% endif %}
     {% if not is_pilot and booking.status in ('pending', 'accepted', 'paid') and not flight.is_past %}
+      <a class="btn btn-ghost" href="{{ url_for('main.cancellation') }}">Stornobedingungen</a>
       <form method="post" action="{{ url_for('bookings.cancel', booking_id=booking.id) }}" data-confirm="Buchung wirklich stornieren?">{{ csrf() }}<button class="btn btn-danger-ghost">Buchung stornieren</button></form>
     {% endif %}
   </div>

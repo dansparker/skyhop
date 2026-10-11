@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Konto löschen – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow">
+  <h1>Konto löschen</h1>
+  <div class="form-card danger-zone">
+    <p>Wenn du dein Konto löschst,</p>
+    <ul>
+      <li>werden Name, E-Mail-Adresse, Telefonnummer, Profiltext, Profilfoto, Flugzeugfotos und hochgeladene Nachweise gelöscht,</li>
+      <li>werden deine Flugwünsche, Merkliste, Benachrichtigungen und dein Newsletter-Abo entfernt,</li>
+      <li>werden deine Nachrichten durch „[Nachricht gelöscht]“ ersetzt,</li>
+      <li>werden offene Buchungen storniert (bezahlte werden erstattet) und deine künftigen Flugangebote abgesagt – betroffene Passagiere werden informiert und erstattet.</li>
+    </ul>
+    <p class="small muted">Buchungs- und Zahlungsdaten müssen wir aus steuerrechtlichen Gründen 7 Jahre aufbewahren (§ 132 BAO); sie werden nur noch in anonymisierter Form mit deinem Konto verknüpft. Abgegebene Bewertungen bleiben ohne deinen Namen erhalten.</p>
+    {% if open_payouts %}
+      <div class="alert alert-warning">Du hast noch {{ open_payouts }} offene Auszahlung(en). Diese können nach der Löschung nur noch manuell über den Support abgewickelt werden.</div>
+    {% endif %}
+    <p>Tipp: Lade vorher deinen <a href="{{ url_for('profile.data_export') }}">Datenexport</a> herunter.</p>
+    <form method="post">
+      {{ csrf() }}
+      <label class="field"><span>Passwort</span><input type="password" name="password" required autocomplete="current-password"></label>
+      <label class="field"><span>Tippe <b>LÖSCHEN</b> zur Bestätigung</span><input name="confirm" required autocomplete="off"></label>
+      <div class="form-actions">
+        <a class="btn btn-ghost" href="{{ url_for('profile.edit') }}">Abbrechen</a>
+        <button class="btn btn-danger" type="submit">Konto endgültig löschen</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

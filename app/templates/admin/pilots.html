@@ -12,6 +12,13 @@
       <div class="grow">
         <b>{{ u.name }}</b> · {{ u.email }}
         <div class="small muted">{{ u.license_type }} · Nr. {{ u.license_number }} · {{ u.flight_hours }} h{% if u.home_airport %} · {{ u.home_airport.icao }}{% endif %}</div>
+        <div class="doc-links">
+          {% for d in u.documents if d.status == 'pending' %}
+            <a class="chip" href="{{ url_for('uploads.document', doc_id=d.id) }}" target="_blank">{{ '📄' if d.content_type == 'application/pdf' else '🖼' }} {{ d.kind_label }}</a>
+          {% else %}
+            <span class="small accent">Keine Nachweise hochgeladen</span>
+          {% endfor %}
+        </div>
       </div>
       <form method="post" action="{{ url_for('admin.pilot_action', user_id=u.id, action='approve') }}">{{ csrf() }}<button class="btn btn-success btn-sm">Freischalten</button></form>
       <form method="post" action="{{ url_for('admin.pilot_action', user_id=u.id, action='reject') }}">{{ csrf() }}<button class="btn btn-danger-ghost btn-sm">Ablehnen</button></form>

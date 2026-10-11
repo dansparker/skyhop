@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Impressum – Skyhop{% endblock %}
+{% block content %}
+<div class="container page narrow prose legal">
+  {% include "legal/_notice.html" %}
+  <h1>Impressum</h1>
+  <p class="muted">Informationen gemäß § 5 E-Commerce-Gesetz (ECG), § 14 Unternehmensgesetzbuch (UGB), § 63 Gewerbeordnung (GewO) und Offenlegung gemäß § 25 Mediengesetz (MedienG).</p>
+
+  <h2>Medieninhaber und Betreiber</h2>
+  <p>
+    <b>{{ legal('name', 'Name / Firma') }}</b>{% if config.LEGAL_FORM %}, {{ config.LEGAL_FORM }}{% endif %}<br>
+    {{ legal('address', 'Anschrift') }}
+  </p>
+  {% if config.LEGAL_REPRESENTATIVE or not config.LEGAL_NAME %}
+    <p>Vertreten durch: {{ legal('representative', 'Geschäftsführer:in / Inhaber:in') }}</p>
+  {% endif %}
+
+  <h2>Kontakt</h2>
+  <p>
+    E-Mail: {{ legal('email', 'E-Mail-Adresse') }}<br>
+    Telefon: {{ legal('phone', 'Telefonnummer') }}
+  </p>
+
+  <h2>Unternehmensdaten</h2>
+  <table class="table legal-table">
+    <tr><th>Unternehmensgegenstand</th><td>Betrieb einer Online-Vermittlungsplattform für nicht-gewerbliche Mitflüge auf Kostenteilungsbasis</td></tr>
+    <tr><th>UID-Nummer</th><td>{{ legal('vat_id', 'UID-Nummer') }}</td></tr>
+    <tr><th>Firmenbuchnummer</th><td>{{ legal('register', 'Firmenbuchnummer (falls eingetragen)') }}</td></tr>
+    <tr><th>Firmenbuchgericht</th><td>{{ legal('register_court', 'Firmenbuchgericht') }}</td></tr>
+    <tr><th>Gewerbe</th><td>{{ legal('trade', 'Gewerbewortlaut') }}</td></tr>
+    <tr><th>Gewerbebehörde</th><td>{{ legal('authority', 'zuständige Bezirkshauptmannschaft / Magistrat') }}</td></tr>
+    <tr><th>Kammerzugehörigkeit</th><td>{{ legal('chamber', 'z. B. Wirtschaftskammer Wien') }}</td></tr>
+    <tr><th>Anwendbare Rechtsvorschriften</th><td>Gewerbeordnung, abrufbar unter <a href="https://www.ris.bka.gv.at">www.ris.bka.gv.at</a></td></tr>
+  </table>
+
+  <h2>Grundlegende Richtung (Blattlinie)</h2>
+  <p>Information über die Plattform Skyhop sowie Vermittlung von Mitflügen in Kleinflugzeugen zwischen Privatpilot:innen und Passagieren.</p>
+
+  <h2>Verbraucherstreitbeilegung</h2>
+  <p>Wir sind nicht verpflichtet und nicht bereit, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen. Bei Fragen oder Beschwerden wende dich bitte direkt an {{ legal('email', 'E-Mail-Adresse') }}.</p>
+
+  <h2>Haftung für Inhalte und Links</h2>
+  <p>Flugangebote, Profile und Bewertungen werden von den Nutzer:innen selbst erstellt. Wir prüfen diese Inhalte nicht vorab, entfernen rechtswidrige Inhalte aber unverzüglich, sobald wir davon Kenntnis erlangen (§ 16 ECG). Für Inhalte externer Websites, auf die wir verlinken, sind deren Betreiber verantwortlich.</p>
+
+  <h2>Bildnachweise und Karten</h2>
+  <p>Kartendaten © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende (ODbL). Kartenbibliothek: Leaflet (BSD-2-Lizenz). Profil- und Flugzeugfotos stammen von den jeweiligen Nutzer:innen.</p>
+
+  <h2>Quellcode</h2>
+  <p>Skyhop ist Open Source: <a href="https://github.com/dansparker/skyhop">github.com/dansparker/skyhop</a> (MIT-Lizenz).</p>
+</div>
+{% endblock %}
