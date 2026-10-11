@@ -28,6 +28,13 @@ def index():
     return render_template("index.html", featured=featured, roundtrips=roundtrips, reviews=reviews, stats=stats)
 
 
+@bp.route("/healthz")
+def healthz():
+    """Liveness/readiness check for Docker and uptime monitors."""
+    db.session.execute(db.text("SELECT 1"))
+    return {"status": "ok"}
+
+
 @bp.route("/so-funktionierts")
 def how_it_works():
     return render_template("pages/how_it_works.html")
@@ -104,7 +111,8 @@ def toggle_favorite(flight_id):
 @bp.route("/dev/mails/<int:index>")
 def dev_mails(index=None):
     """Local inbox for development: shows mails that were not sent because MAIL_SERVER is not configured."""
-    if current_app.config.get("MAIL_SERVER") or not (current_app.debug or current_app.testing):
+    cfg = current_app.config
+    if cfg.get("SKYHOP_ENV") == "production" or cfg.get("MAIL_SERVER") or not (current_app.debug or current_app.testing):
         abort(404)
     from ..mailer import outbox
 

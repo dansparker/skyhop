@@ -7,3 +7,5 @@ stripe==16.0.0
 requests==2.34.2
 python-dotenv==1.2.4
 Pillow==12.3.0
+gunicorn==26.2.0
+PyMySQL==1.2.3

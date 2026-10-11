@@ -201,6 +201,18 @@ Neue Spalten werden beim Start automatisch zu einer bestehenden SQLite-Datenbank
 vorhandene Konten gelten dabei als bestätigt. Für Produktion mit PostgreSQL empfiehlt sich später
 Flask-Migrate/Alembic.
 
+## Deployment
+
+Anleitung für **Shared Hosting** (cPanel/Plesk mit Python-App, MySQL) und für einen **eigenen Server mit
+Docker** (PostgreSQL + Caddy mit automatischem HTTPS): **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
+
+- `wsgi.py` / `passenger_wsgi.py` – Einstiegspunkte für Gunicorn bzw. Passenger
+- `deploy/shared-hosting/install.sh`, `update.sh` – Installation und Updates auf Shared Hosting
+- `Dockerfile`, `docker-compose.yml`, `deploy/docker/` – Docker-Stack
+- `flask --app wsgi create-admin` – Admin-Konto anlegen
+- `SKYHOP_ENV=production` erzwingt sicheren Secret Key, Secure-Cookies und Security-Header
+- CI testet zusätzlich gegen **MariaDB**, **PostgreSQL** und den kompletten **Docker-Stack**
+
 ## Projektstruktur
 
 ```

@@ -1,5 +1,6 @@
 name: tests
 on: [push, pull_request]
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -10,3 +11,82 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
       - run: pytest -q
+
+  # Shared hosting usually means MySQL/MariaDB and an older Python
+  mysql:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: skyhop
+          MARIADB_USER: skyhop
+          MARIADB_PASSWORD: skyhop
+          MARIADB_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install -r requirements.txt
+      - name: Smoke test on MariaDB
+        env:
+          DATABASE_URL: mysql://skyhop:skyhop@127.0.0.1:3306/skyhop
+        run: |
+          flask --app wsgi init-db
+          python scripts/smoke.py
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: skyhop
+          POSTGRES_USER: skyhop
+          POSTGRES_PASSWORD: skyhop
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd="pg_isready -U skyhop" --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt -r requirements-postgres.txt
+      - name: Smoke test on PostgreSQL
+        env:
+          DATABASE_URL: postgres://skyhop:skyhop@127.0.0.1:5432/skyhop
+        run: |
+          flask --app wsgi init-db
+          python scripts/smoke.py
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare .env
+        run: |
+          cp .env.example .env
+          sed -i "s/^SKYHOP_SECRET_KEY=.*/SKYHOP_SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')/" .env
+          sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=ci-test-password/" .env
+          sed -i "s#^BASE_URL=.*#BASE_URL=http://localhost#" .env
+      - name: Start stack
+        run: docker compose up -d --build --wait --wait-timeout 180
+      - name: Check through Caddy
+        run: |
+          curl -fsS http://localhost/healthz
+          curl -fsS http://localhost/ | grep -q "skyhop"
+          curl -fsSI http://localhost/ | grep -qi "x-frame-options: DENY"
+      - name: Admin + cron inside the container
+        run: |
+          docker compose exec -T app flask --app wsgi create-admin --email ci@skyhop.test \
+            --first-name CI --last-name Bot --password ci-password-123456
+          docker compose exec -T app flask --app wsgi cron
+      - name: Logs
+        if: always()
+        run: docker compose logs --no-color --tail=100

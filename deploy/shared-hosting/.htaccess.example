@@ -1,0 +1,7 @@
+# Optional für Apache-basiertes Shared Hosting: HTTP → HTTPS umleiten.
+# Nur nötig, wenn das Panel keine Option „HTTPS erzwingen“ hat. In das Web-Root der Domain kopieren
+# (den Ordner, den das Panel für die Python-App als „Application URL“ verwendet), Dateiname: .htaccess
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]

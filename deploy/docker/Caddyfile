@@ -1,0 +1,9 @@
+# DOMAIN aus der .env, z. B. "skyhop.example.at" → automatisches HTTPS (Let's Encrypt).
+# Ohne Domain: DOMAIN=":80" → Skyhop ist per http://<server-ip> erreichbar.
+{$DOMAIN} {
+	encode zstd gzip
+	request_body {
+		max_size 12MB
+	}
+	reverse_proxy app:8000
+}

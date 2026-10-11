@@ -1,5 +1,7 @@
 import os
 import secrets
+
+import click
 from datetime import datetime
 
 from flask import Flask, abort, render_template, request, session
@@ -22,8 +24,12 @@ def create_app(config=None):
     env = os.environ.get
     app.config.update(
         SECRET_KEY=env("SKYHOP_SECRET_KEY", "dev-only-change-me"),
-        SQLALCHEMY_DATABASE_URI=env("DATABASE_URL", "sqlite:///" + os.path.join(app.instance_path, "skyhop.db")),
+        SQLALCHEMY_DATABASE_URI=_database_url(
+            env("DATABASE_URL", "") or "sqlite:///" + os.path.join(app.instance_path, "skyhop.db")),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        # MySQL on shared hosting closes idle connections → check before use, recycle regularly
+        SQLALCHEMY_ENGINE_OPTIONS={"pool_pre_ping": True, "pool_recycle": 280},
+        SKYHOP_ENV=env("SKYHOP_ENV", "development"),
         SERVICE_FEE_RATE=0.10,
         CSRF_ENABLED=True,
         BASE_URL=env("BASE_URL", ""),
@@ -76,6 +82,7 @@ def create_app(config=None):
     )
     if config:
         app.config.update(config)
+    _configure_production(app)
     if app.config["TRUST_PROXY"]:
         from werkzeug.middleware.proxy_fix import ProxyFix
 
@@ -112,9 +119,14 @@ def create_app(config=None):
 
 
 def _add_missing_columns():
-    """Tiny auto-migration: add columns introduced after a database was created (SQLite dev databases)."""
+    """Tiny auto-migration: add columns introduced after a database was created.
+
+    Works for SQLite, PostgreSQL and MySQL/MariaDB (identifiers and boolean literals per dialect).
+    """
     from sqlalchemy import inspect, text
 
+    dialect = db.engine.dialect
+    q = dialect.identifier_preparer.quote
     insp = inspect(db.engine)
     added = set()
     for table in db.metadata.sorted_tables:
@@ -124,19 +136,65 @@ def _add_missing_columns():
         for col in table.columns:
             if col.name in existing:
                 continue
-            ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(db.engine.dialect)}'
+            ddl = f"ALTER TABLE {q(table.name)} ADD COLUMN {q(col.name)} {col.type.compile(dialect)}"
             default = col.default.arg if col.default is not None and col.default.is_scalar else None
             if isinstance(default, bool):
-                ddl += f" NOT NULL DEFAULT {int(default)}"
+                literal = ("TRUE" if default else "FALSE") if dialect.name == "postgresql" else str(int(default))
+                ddl += f" DEFAULT {literal} NOT NULL"
             elif isinstance(default, (int, float)):
                 ddl += f" DEFAULT {default}"
             db.session.execute(text(ddl))
             added.add(f"{table.name}.{col.name}")
     if "user.email_confirmed" in added:
         # Accounts that existed before double opt-in was introduced count as confirmed
-        db.session.execute(text('UPDATE "user" SET email_confirmed = 1'))
+        true = "TRUE" if dialect.name == "postgresql" else "1"
+        db.session.execute(text(f"UPDATE {q('user')} SET {q('email_confirmed')} = {true}"))
     if added:
         db.session.commit()
+
+
+def _database_url(url):
+    """Normalise DATABASE_URL from hosting panels / PaaS to the drivers Skyhop ships with."""
+    if url.startswith("postgres://"):
+        url = "postgresql://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    if url.startswith("mysql://"):
+        url = "mysql+pymysql://" + url[len("mysql://"):]
+    if url.startswith("mysql+pymysql://") and "charset=" not in url:
+        url += ("&" if "?" in url else "?") + "charset=utf8mb4"
+    return url
+
+
+def _configure_production(app):
+    """Secure cookies, mandatory secret key and security headers for SKYHOP_ENV=production."""
+    if app.config.get("SKYHOP_ENV") != "production":
+        return
+    if app.config["SECRET_KEY"] in ("", "dev-only-change-me") or len(app.config["SECRET_KEY"]) < 32:
+        raise RuntimeError("SKYHOP_SECRET_KEY muss in Produktion gesetzt sein (mind. 32 Zeichen).")
+    https = app.config.get("BASE_URL", "").startswith("https://")
+    if not app.config.get("MAIL_SERVER") and not app.testing:
+        app.logger.warning("MAIL_SERVER ist nicht gesetzt – Bestätigungs-E-Mails werden NICHT verschickt.")
+    if not https and not app.testing:
+        app.logger.warning("BASE_URL ist nicht https:// – Cookies werden ohne Secure-Flag gesetzt.")
+    app.config.update(
+        SESSION_COOKIE_SECURE=https,
+        REMEMBER_COOKIE_SECURE=https,
+        SESSION_COOKIE_HTTPONLY=True,
+        REMEMBER_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        PREFERRED_URL_SCHEME="https" if https else "http",
+    )
+
+    @app.after_request
+    def security_headers(resp):
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        if https:
+            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000")
+        return resp
 
 
 # Endpoints that receive POSTs from third parties and authenticate themselves (signature)
@@ -275,6 +333,36 @@ def _register_cli(app):
             removed = cleanup_documents()
         print(f"{result['completed_flights']} Flüge abgeschlossen, {result['processed']} Auszahlungen bearbeitet, "
               f"{removed} geprüfte Dokumente gelöscht.")
+
+    @app.cli.command("create-admin")
+    @click.option("--email", prompt="E-Mail")
+    @click.option("--first-name", prompt="Vorname")
+    @click.option("--last-name", prompt="Nachname")
+    @click.password_option("--password", prompt="Passwort (mind. 12 Zeichen)")
+    def create_admin_cmd(email, first_name, last_name, password):
+        """Create (or promote) an administrator account."""
+        from .models import User
+
+        if len(password) < 12:
+            raise click.BadParameter("Das Passwort muss mindestens 12 Zeichen lang sein.")
+        email = email.strip().lower()
+        user = User.query.filter_by(email=email).first()
+        if user is None:
+            user = User(email=email, first_name=first_name, last_name=last_name)
+            db.session.add(user)
+        user.set_password(password)
+        user.is_admin = True
+        user.email_confirmed = True
+        user.email_confirmed_at = datetime.utcnow()
+        user.terms_accepted_at = datetime.utcnow()
+        user.terms_version = app.config["TERMS_VERSION"]
+        db.session.commit()
+        click.echo(f"Admin {email} ist eingerichtet.")
+
+    @app.cli.command("init-db")
+    def init_db_cmd():
+        """Create tables, add new columns and load airfields (safe to run repeatedly)."""
+        click.echo("Datenbank ist bereit.")
 
     @app.cli.command("reset-db")
     def reset_db_cmd():
