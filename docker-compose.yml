@@ -38,7 +38,9 @@ services:
     entrypoint: ["sh", "-c", "while true; do flask --app wsgi cron; sleep 3600; done"]
     command: []
     healthcheck:
-      disable: true
+      # no web server in this container – just report the process as alive
+      test: ["CMD", "python", "-c", "0"]
+      interval: 60s
     depends_on:
       app:
         condition: service_started
