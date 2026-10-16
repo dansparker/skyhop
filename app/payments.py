@@ -100,7 +100,7 @@ def mark_paid(booking, provider, reference=None):
     _store_reference(booking, provider, reference)
     flight = booking.flight
     link = url_for("bookings.detail", booking_id=booking.id)
-    notify(flight.pilot, f"{booking.passenger.short_name} hat {booking.seats} Platz/Plätze für „{flight.title}“ bezahlt.",
+    notify(flight.pilot, f"{booking.passenger.short_name} hat {booking.seats} {'Platz' if booking.seats == 1 else 'Plätze'} für „{flight.title}“ bezahlt.",
            link)
     notify(booking.passenger, f"Buchung bestätigt: „{flight.title}“ am {flight.departure_time:%d.%m.%Y um %H:%M} Uhr. "
            f"Bezahlt: {booking.total_price} €.", link)

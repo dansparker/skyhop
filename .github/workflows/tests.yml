@@ -43,6 +43,48 @@ jobs:
           flask --app wsgi init-db
           python scripts/smoke.py
 
+  # Runs deploy/shared-hosting/install.sh + update.sh the way a user would on cPanel/Plesk
+  install-script:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mariadb:10.11
+        env:
+          MARIADB_DATABASE: skyhop
+          MARIADB_USER: skyhop
+          MARIADB_PASSWORD: "p@ss:w/rd"
+          MARIADB_ROOT_PASSWORD: root
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: install.sh (first run creates .env, second run installs)
+        run: |
+          python -m venv ~/virtualenv/skyhop
+          source ~/virtualenv/skyhop/bin/activate
+          bash deploy/shared-hosting/install.sh
+          grep -q '^SKYHOP_ENV=production' .env
+          sed -i 's#^BASE_URL=.*#BASE_URL=https://skyhop.example.at#' .env
+          sed -i 's#^DATABASE_URL=.*#DATABASE_URL=mysql://skyhop:p%40ss%3Aw%2Frd@127.0.0.1:3306/skyhop#' .env
+          SKIP_ADMIN=1 bash deploy/shared-hosting/install.sh
+          flask --app wsgi create-admin --email ci@skyhop.test --first-name CI --last-name Bot --password ci-password-123456
+          test -f tmp/restart.txt
+          SKIP_PULL=1 bash deploy/shared-hosting/update.sh  # the CI checkout is a detached HEAD
+      - name: Serve passenger_wsgi like Passenger does
+        run: |
+          source ~/virtualenv/skyhop/bin/activate
+          gunicorn passenger_wsgi:application --bind 127.0.0.1:8000 --daemon
+          sleep 3
+          curl -fsS http://127.0.0.1:8000/healthz
+          curl -fsS http://127.0.0.1:8000/ | grep -q "Mitflugbörse"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/dev/mails)" = 404
+          flask --app wsgi cron
+
   postgres:
     runs-on: ubuntu-latest
     services:

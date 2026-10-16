@@ -80,7 +80,7 @@
             <div class="request-row">
               {{ avatar(b.passenger, 'sm') }}
               <div class="grow">
-                <a href="{{ url_for('profile.public', user_id=b.passenger.id) }}"><b>{{ b.passenger.short_name }}</b></a> · {{ b.seats }} Platz/Plätze · {{ b.total_price|eur }}
+                <a href="{{ url_for('profile.public', user_id=b.passenger.id) }}"><b>{{ b.passenger.short_name }}</b></a> · {{ b.seats }} {{ 'Platz' if b.seats == 1 else 'Plätze' }} · {{ b.total_price|eur }}
                 {% if b.message %}<div class="small muted">„{{ b.message|truncate(120) }}“</div>{% endif %}
               </div>
               {{ booking_status(b) }}

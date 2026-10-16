@@ -7,6 +7,7 @@
 #
 # Das Skript ist idempotent – du kannst es gefahrlos erneut ausführen.
 set -euo pipefail
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$APP_DIR"
@@ -27,8 +28,8 @@ print(f"Python {sys.version.split()[0]} in {sys.prefix}")
 PY
 
 say "Installiere Abhängigkeiten"
-pip install --upgrade pip >/dev/null
-pip install -r requirements.txt
+python -m pip install --upgrade pip >/dev/null
+python -m pip install -r requirements.txt
 
 if [[ ! -f .env ]]; then
   say "Lege .env an"

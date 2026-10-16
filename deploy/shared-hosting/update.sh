@@ -3,6 +3,7 @@
 #   source <pfad-zur-virtualenv>/bin/activate
 #   bash deploy/shared-hosting/update.sh
 set -euo pipefail
+export PYTHONIOENCODING=utf-8 PYTHONUTF8=1
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$APP_DIR"
@@ -12,7 +13,7 @@ if [[ -z "${VIRTUAL_ENV:-}" ]]; then
   exit 1
 fi
 
-if [[ -d .git ]]; then
+if [[ -d .git && "${SKIP_PULL:-0}" != "1" ]]; then
   echo "==> Hole neuen Code"
   git pull --ff-only
 else
@@ -20,7 +21,7 @@ else
 fi
 
 echo "==> Abhängigkeiten"
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 
 echo "==> Datenbank aktualisieren"
 flask --app wsgi init-db

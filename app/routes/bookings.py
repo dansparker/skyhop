@@ -74,7 +74,7 @@ def request_booking(flight_id):
 
         db.session.add(Message(conversation_id=conv.id, sender_id=current_user.id, body=message))
         conv.updated_at = datetime.utcnow()
-    notify(flight.pilot, f"{current_user.short_name} möchte {seats} Platz/Plätze für „{flight.title}“ buchen.",
+    notify(flight.pilot, f"{current_user.short_name} möchte {seats} {'Platz' if seats == 1 else 'Plätze'} für „{flight.title}“ buchen.",
            url_for("bookings.detail", booking_id=booking.id))
     db.session.commit()
     flash("Deine Anfrage wurde an den Piloten gesendet. Du wirst benachrichtigt, sobald sie beantwortet ist.",
